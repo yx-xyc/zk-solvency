@@ -1,0 +1,15 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+
+# Generated data files
+/data/
+
+# macOS
+.DS_Store
+
+# Environment / secrets
+.env
+
+# Claude Code local settings
+.claude/settings.local.json

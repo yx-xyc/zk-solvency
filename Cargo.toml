@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "crates/types",
+    "crates/data-gen",
+]
+resolver = "2"
