@@ -56,6 +56,21 @@ contract SolvencyAttestationTest is Test {
         attestation.submitProof(proofBytes, publicValues);
     }
 
+    // Validates ABI encoding produced by the Rust script matches Solidity's abi.decode.
+    // public_values captured from: SP1_PROVER=mock cargo run --manifest-path script/Cargo.toml
+    function test_realPublicValues_decodedCorrectly() public {
+        bytes memory publicValues = hex"c62b97ef52f4d1c1139f3d829235bfa7510b43beb1da0bf0d1b2f961452bb41b000000000000000000000000000000000000000000000000000000000007a60a0000000000000000000000000000000000000000000000000000000000092da5";
+
+        attestation.submitProof(hex"", publicValues);
+
+        (bytes32 root, uint64 liabilities, uint64 assets,) = attestation.latestAttestation();
+
+        assertEq(root,        bytes32(0xc62b97ef52f4d1c1139f3d829235bfa7510b43beb1da0bf0d1b2f961452bb41b));
+        assertEq(liabilities, 501_258);
+        assertEq(assets,      601_509);
+        assertGe(assets,      liabilities); // solvency invariant
+    }
+
     function test_submitProof_overwritesPreviousAttestation() public {
         bytes memory pv1 = abi.encode(MERKLE_ROOT, LIABILITIES, ASSETS);
         attestation.submitProof(hex"", pv1);
