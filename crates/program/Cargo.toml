@@ -1,0 +1,9 @@
+[package]
+name = "solvency-program"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sp1-zkvm = "4.0.0"
+types    = { path = "../types" }
+
