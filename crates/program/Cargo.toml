@@ -1,0 +1,10 @@
+[package]
+name = "solvency-program"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sp1-zkvm       = "6.1.0"
+types          = { path = "../types" }
+alloy-sol-types = { version = "0.8", default-features = false }
+

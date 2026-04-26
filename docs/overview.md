@@ -49,14 +49,17 @@ Reserve balances (assets)   ──► Sum liabilities & assets ──► total_l
 
 ```
 zk-solvency/
-├── docs/             # Project documentation (this folder)
-├── program/          # SP1 zkVM Rust program (solvency logic)
-├── script/           # Proof generation & on-chain submission scripts
-├── contracts/        # Foundry project — Solidity verifier + attestation contract
-├── data/             # Mock data generator (user balances, reserve balances)
-├── inclusion/        # Merkle inclusion proof module
-├── benchmark/        # Benchmark harness
-└── web/              # Next.js frontend (user inclusion checker)
+├── docs/                  # Project documentation
+├── crates/
+│   ├── types/             # Shared types: UserBalance, ReserveBalance, MerkleTree
+│   ├── data-gen/          # CLI — generates data/users.json and data/reserves.json
+│   ├── program/           # SP1 zkVM guest program (solvency logic, compiled to RISC-V ELF)
+│   ├── inclusion/         # CLI — Merkle inclusion proof generator and verifier
+│   └── bench/             # Merkle tree operation benchmarks
+├── script/                # Standalone workspace — proof generation via sp1-sdk
+├── contracts/             # Foundry project — SolvencyAttestation.sol + tests
+├── web/                   # Next.js frontend — inclusion checker UI
+└── data/                  # Generated (gitignored) — users.json, reserves.json
 ```
 
 ---
@@ -67,6 +70,33 @@ Original proposal had user-level inclusion proofs explicitly out of scope. Based
 
 1. **Benchmark user inclusion proofs** — measure generation time as N (number of users) scales
 2. **User-facing website** — simple UI where a user enters their ID and sees whether their balance is included in the latest solvency proof, with a link to the on-chain attestation
+
+---
+
+## Workspace Layout Note
+
+`script/` is intentionally a **separate Cargo workspace** from the root workspace. This is the idiomatic layout recommended by Succinct for SP1 projects — `sp1-sdk` carries a forked `serde_core` crate that conflicts with `alloy`'s derive macros when both live in the same dependency graph. There is no clean in-tree fix: `[patch.crates-io]` is fragile across sdk updates, and Cargo's feature resolver cannot resolve crate identity conflicts. Keeping `script/` isolated is the upstream-recommended solution and what Succinct's own example repos do.
+
+If a future sp1-sdk release drops the serde fork, `script/` can be folded back into the root workspace.
+
+---
+
+## Proving Modes
+
+The integration script supports two proving modes, switched via a single environment variable:
+
+| Mode | `SP1_PROVER` | How | When to use |
+|---|---|---|---|
+| Mock | `mock` (default) | Runs program logic in SP1's simulator; no real ZK proof generated | Development — instant, no API key needed |
+| Network | `network` | Real Groth16 proof via Succinct's cloud GPU network (~30–60s) | Final demo / submission |
+
+Switching modes requires no code changes — just set the env var before running the script:
+```bash
+SP1_PROVER=mock    cargo run -p script   # dev
+SP1_PROVER=network cargo run -p script   # production (also requires NETWORK_PRIVATE_KEY)
+```
+
+Mock proofs cannot be verified on-chain. On-chain submission is only performed when `SP1_PROVER=network` and `CONTRACT_ADDRESS` + `PRIVATE_KEY` env vars are set.
 
 ---
 
