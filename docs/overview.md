@@ -70,6 +70,14 @@ Original proposal had user-level inclusion proofs explicitly out of scope. Based
 
 ---
 
+## Workspace Layout Note
+
+`script/` is intentionally a **separate Cargo workspace** from the root workspace. This is the idiomatic layout recommended by Succinct for SP1 projects — `sp1-sdk` carries a forked `serde_core` crate that conflicts with `alloy`'s derive macros when both live in the same dependency graph. There is no clean in-tree fix: `[patch.crates-io]` is fragile across sdk updates, and Cargo's feature resolver cannot resolve crate identity conflicts. Keeping `script/` isolated is the upstream-recommended solution and what Succinct's own example repos do.
+
+If a future sp1-sdk release drops the serde fork, `script/` can be folded back into the root workspace.
+
+---
+
 ## Proving Modes
 
 The integration script supports two proving modes, switched via a single environment variable:
