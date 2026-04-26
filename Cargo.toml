@@ -3,6 +3,7 @@ members = [
     "crates/types",
     "crates/data-gen",
     "crates/program",
+    "crates/inclusion",
 ]
 exclude  = ["script"]
 resolver = "2"

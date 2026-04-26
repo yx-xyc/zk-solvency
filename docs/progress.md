@@ -52,18 +52,24 @@
 - ELF embedded via `include_bytes!` pointing to `target/elf-compilation/riscv64im-succinct-zkvm-elf/release/solvency-program`
 - Mock mode end-to-end verified: 96-byte public_values, correct Merkle root
 
+### Step 5 — Inclusion Proof CLI ✅
+- `crates/inclusion` — binary in the root workspace
+- CLI: `cargo run -p inclusion -- --user-id <ID>`
+- Flags: `-u/--user-id` (required), `--users-file` (default `data/users.json`), `--proof-file` (default `proof.json`)
+- Rebuilds Merkle tree identically to the SP1 program, generates sibling-path proof, verifies against committed root from `proof.json`
+- Prints leaf hash, recomputed root, proof depth, full sibling path, and verification result
+- If `proof.json` is absent, prints proof and exits 0 (skips verification)
+- Exit 1 on: user ID not found, I/O error, parse error, or failed verification
+
 ---
 
 ## In Progress
 
-*(nothing — all four steps done)*
+*(nothing — all five steps done)*
 
 ---
 
 ## Up Next
-
-### Step 5 — Inclusion Proof CLI
-- CLI tool: given a user ID, outputs a Merkle inclusion proof for the latest attestation
 
 ### Step 6 — Benchmark Suite
 - Measure proof generation time for N = 10 / 100 / 500 / 1000 / 5000 users
