@@ -20,3 +20,9 @@ contracts/lib/
 
 # Claude Code local settings
 .claude
+
+script/target/
+script/Cargo.lock
+
+# Generated proof artifacts
+proof.json

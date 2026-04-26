@@ -1,0 +1,51 @@
+use sp1_sdk::{Elf, ProveRequest, Prover, ProverClient, SP1Stdin};
+use types::{ReserveBalance, UserBalance};
+
+// Pre-compiled ELF — run `cargo prove build` in crates/program to regenerate.
+const SOLVENCY_ELF: &[u8] = include_bytes!(
+    "../../target/elf-compilation/riscv64im-succinct-zkvm-elf/release/solvency-program"
+);
+
+// Obtained via `cargo prove vkey` — must match SolvencyAttestation constructor.
+const PROGRAM_VKEY: &str =
+    "0x00680f24d7f1c5c844c2852e84244b6a34215092dc492599792cee4304fd15dd";
+
+#[tokio::main]
+async fn main() {
+    // 1. Load data
+    let users: Vec<UserBalance> =
+        serde_json::from_str(&std::fs::read_to_string("data/users.json").unwrap()).unwrap();
+    let reserves: Vec<ReserveBalance> =
+        serde_json::from_str(&std::fs::read_to_string("data/reserves.json").unwrap()).unwrap();
+
+    // 2. Set up prover (reads SP1_PROVER env var: "mock" or "network")
+    let client = ProverClient::from_env().await;
+    let pk = client.setup(Elf::Static(SOLVENCY_ELF)).await.unwrap();
+    println!("Program vkey : {PROGRAM_VKEY}");
+
+    // 3. Write private inputs
+    let mut stdin = SP1Stdin::new();
+    stdin.write(&users);
+    stdin.write(&reserves);
+
+    // 4. Generate proof
+    let mode = std::env::var("SP1_PROVER").unwrap_or_else(|_| "mock".into());
+    println!("Generating proof (SP1_PROVER={mode})...");
+    let proof = client.prove(&pk, stdin).groth16().await.unwrap();
+    println!("Proof generated.");
+
+    let proof_bytes   = proof.bytes();
+    let public_values = proof.public_values.to_vec();
+    println!("proof_bytes   ({} bytes): 0x{}", proof_bytes.len(),   hex::encode(&proof_bytes));
+    println!("public_values ({} bytes): 0x{}", public_values.len(), hex::encode(&public_values));
+
+    // 5. Save proof artifacts for on-chain submission (via forge script)
+    let artifacts = serde_json::json!({
+        "proof_bytes":   format!("0x{}", hex::encode(&proof_bytes)),
+        "public_values": format!("0x{}", hex::encode(&public_values)),
+        "program_vkey":  PROGRAM_VKEY,
+    });
+    std::fs::write("proof.json", serde_json::to_string_pretty(&artifacts).unwrap()).unwrap();
+    println!("Proof artifacts saved to proof.json");
+    println!("To submit on-chain: set CONTRACT_ADDRESS and run the forge deployment script.");
+}

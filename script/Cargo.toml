@@ -1,0 +1,20 @@
+[workspace]
+members  = ["."]
+resolver = "2"
+
+[package]
+name    = "script"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "script"
+path = "src/main.rs"
+
+[dependencies]
+sp1-sdk    = { version = "6.1.0", default-features = false }
+types      = { path = "../crates/types" }
+serde_json = "1"
+hex        = "0.4"
+tokio      = { version = "1", features = ["full"] }
+

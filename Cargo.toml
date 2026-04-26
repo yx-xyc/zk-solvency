@@ -4,6 +4,7 @@ members = [
     "crates/data-gen",
     "crates/program",
 ]
+exclude  = ["script"]
 resolver = "2"
 
 [profile.release]

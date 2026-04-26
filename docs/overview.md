@@ -70,6 +70,25 @@ Original proposal had user-level inclusion proofs explicitly out of scope. Based
 
 ---
 
+## Proving Modes
+
+The integration script supports two proving modes, switched via a single environment variable:
+
+| Mode | `SP1_PROVER` | How | When to use |
+|---|---|---|---|
+| Mock | `mock` (default) | Runs program logic in SP1's simulator; no real ZK proof generated | Development — instant, no API key needed |
+| Network | `network` | Real Groth16 proof via Succinct's cloud GPU network (~30–60s) | Final demo / submission |
+
+Switching modes requires no code changes — just set the env var before running the script:
+```bash
+SP1_PROVER=mock    cargo run -p script   # dev
+SP1_PROVER=network cargo run -p script   # production (also requires NETWORK_PRIVATE_KEY)
+```
+
+Mock proofs cannot be verified on-chain. On-chain submission is only performed when `SP1_PROVER=network` and `CONTRACT_ADDRESS` + `PRIVATE_KEY` env vars are set.
+
+---
+
 ## What Gives Users Confidence
 
 - The Merkle root is committed on-chain — tamper-evident and permanent
