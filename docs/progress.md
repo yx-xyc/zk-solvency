@@ -1,7 +1,7 @@
 # Development Progress
 
 ## Current Status
-**Phase 1 — Core ZK Solvency** (in progress)
+**Phase 1 — Core ZK Solvency** ✅ Complete
 
 ---
 
@@ -39,7 +39,7 @@
   - Constructor takes SP1 Groth16 gateway address + `programVKey`
   - `submitProof(proofBytes, publicValues)` — verifies proof via SP1 gateway, stores attestation, emits `SolvencyProven` event
   - SP1 Groth16 gateway on Sepolia: `0x397A5f7f3dBd538f23DE225B51f532c34448dA9B`
-- 3 passing unit tests (mock verifier)
+- 4 passing unit tests (mock verifier, including one using real script-generated public values)
 
 ### Step 4 — Integration Script ✅
 - `script/` — standalone Cargo workspace (separate from root to avoid serde_core conflict with sp1-sdk)
@@ -92,15 +92,6 @@
 ## Up Next
 
 *(Phase 1 complete)*
-
----
-
-## Phase 2 — Inclusion Proofs + Benchmarking
-- Step 5: CLI tool to generate Merkle inclusion proof for a given user ID
-- Step 6: Benchmark suite (N = 10 / 100 / 500 / 1000 / 5000), fill in `docs/benchmarks.md`
-
-## Phase 3 — Frontend Website
-- Step 7: Next.js app with inclusion checker UI
 
 ---
 
