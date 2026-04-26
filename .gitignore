@@ -5,6 +5,13 @@
 # Generated data files
 /data/
 
+# Foundry build artifacts and cache
+contracts/out/
+contracts/cache/
+
+# Foundry dependencies (reinstall with: cd contracts && forge install succinctlabs/sp1-contracts --no-git)
+contracts/lib/
+
 # macOS
 .DS_Store
 
