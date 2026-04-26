@@ -11,6 +11,10 @@ edition = "2021"
 name = "script"
 path = "src/main.rs"
 
+[[bin]]
+name = "bench"
+path = "src/bench.rs"
+
 [dependencies]
 sp1-sdk    = { version = "6.1.0", default-features = false }
 types      = { path = "../crates/types" }

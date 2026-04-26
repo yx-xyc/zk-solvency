@@ -4,6 +4,7 @@ members = [
     "crates/data-gen",
     "crates/program",
     "crates/inclusion",
+    "crates/bench",
 ]
 exclude  = ["script"]
 resolver = "2"

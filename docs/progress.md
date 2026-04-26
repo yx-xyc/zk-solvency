@@ -61,17 +61,27 @@
 - If `proof.json` is absent, prints proof and exits 0 (skips verification)
 - Exit 1 on: user ID not found, I/O error, parse error, or failed verification
 
+### Step 6 — Benchmark Suite ✅
+- `crates/bench` — Merkle tree operations benchmark (root workspace, release build)
+  - Times `MerkleTree::build`, `tree.prove`, `proof.verify`, and full inclusion round-trip
+  - Run: `cargo run -p bench --release`
+- `script/src/bench.rs` — SP1 mock proof timing (script workspace)
+  - Times full zkVM execution for each N
+  - Run: `SP1_PROVER=mock cargo run --manifest-path script/Cargo.toml --bin bench`
+- Results recorded in `docs/benchmarks.md`
+- Key findings: build is O(N), prove/verify are O(log N) ≈ constant; SP1 mock grows ~linearly with N (27s at N=5000)
+
 ---
 
 ## In Progress
 
-*(nothing — all five steps done)*
+*(nothing — all six steps done)*
 
 ---
 
 ## Up Next
 
-### Step 6 — Benchmark Suite
+### Step 7 — Next.js Frontend
 - Measure proof generation time for N = 10 / 100 / 500 / 1000 / 5000 users
 - Fill in `docs/benchmarks.md`
 
