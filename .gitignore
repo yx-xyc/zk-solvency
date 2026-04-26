@@ -26,3 +26,7 @@ script/Cargo.lock
 
 # Generated proof artifacts
 proof.json
+
+# Next.js frontend
+web/node_modules/
+web/.next/

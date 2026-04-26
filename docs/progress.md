@@ -73,17 +73,25 @@
 
 ---
 
+### Step 7 — Next.js Frontend ✅
+- `web/` — Next.js 16 App Router, TypeScript, Tailwind CSS
+- Server component reads `proof.json`, decodes ABI-encoded public_values, renders attestation card
+- Client component (`InclusionChecker`) handles form state and fetches `/api/verify`
+- API route (`app/api/verify/route.ts`) spawns the `inclusion` Rust binary as a subprocess, parses stdout
+- Verified end-to-end: attestation card shows correct merkle root/totals; user ID 42 → ✓ included; user ID 9999 → ✗ not found
+- Start with: `cd web && npm run dev` → http://localhost:3000
+
+---
+
 ## In Progress
 
-*(nothing — all six steps done)*
+*(nothing — all seven steps done)*
 
 ---
 
 ## Up Next
 
-### Step 7 — Next.js Frontend
-- Measure proof generation time for N = 10 / 100 / 500 / 1000 / 5000 users
-- Fill in `docs/benchmarks.md`
+*(Phase 1 complete)*
 
 ---
 
