@@ -48,10 +48,10 @@
   - Loads `data/users.json` + `data/reserves.json`
   - Generates proof via `ProverClient::from_env()` — respects `SP1_PROVER` env var
   - Saves `proof.json` with proof bytes, public values, and programVKey
-  - Optionally submits on-chain if `CONTRACT_ADDRESS` + `PRIVATE_KEY` + `RPC_URL` are set
+  - Submit on-chain via `contracts/script/Submit.s.sol` (requires `CONTRACT_ADDRESS`, `PRIVATE_KEY`, `--rpc-url`)
 - sp1-sdk 6.1.0 with `default-features = false` (avoids serde conflict)
 - ELF embedded via `include_bytes!` pointing to `target/elf-compilation/riscv64im-succinct-zkvm-elf/release/solvency-program`
-- Mock mode end-to-end verified: 96-byte public_values, correct Merkle root
+- Mock mode end-to-end verified: 128-byte public_values, correct Merkle root
 
 ### Step 5 — Inclusion Proof CLI ✅
 - `crates/inclusion` — binary in the root workspace

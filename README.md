@@ -7,7 +7,7 @@ A zero-knowledge proof system for cryptocurrency exchange solvency. An exchange 
 1. Exchange provides user balances (liabilities) and reserve balances (assets) as private inputs to the SP1 zkVM program.
 2. The program builds a SHA-256 Merkle tree over user balances, sums both sides, asserts solvency, and commits four public values: `merkleRoot`, `assetsCommitment`, `totalLiabilities`, `totalAssets`.
 3. A ZK proof is generated and submitted to `SolvencyAttestation.sol` on-chain.
-4. Any user can verify their balance is in the Merkle root using the web UI — no server, no Rust binary required.
+4. Any user can verify their balance is in the Merkle root using the web UI — no Rust binary required.
 
 ## Architecture
 
@@ -125,7 +125,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The page reads `proof.json` from the repo root and displays the latest attestation. Users can enter any user ID to verify their balance inclusion — the Merkle proof runs entirely in the browser using the Web Crypto API (no Rust binary needed).
+Open [http://localhost:3000](http://localhost:3000). The page reads `proof.json` from the repo root and displays the latest attestation. Users can enter any user ID to verify their balance inclusion — Merkle path verification runs in the browser using the Web Crypto API (no Rust binary needed).
 
 ---
 
@@ -199,7 +199,15 @@ See `docs/benchmarks.md` for reference numbers on Apple Silicon.
 After generating a real Groth16 proof (network mode), submit it on-chain:
 
 1. Deploy `SolvencyAttestation.sol` with the SP1 verifier gateway address and `PROGRAM_VKEY` from `proof.json`.
-2. Call `submitProof(proofBytes, publicValues)` with the values from `proof.json`.
+2. Run the Forge submit script:
+
+```bash
+CONTRACT_ADDRESS=0x... PRIVATE_KEY=0x... \
+PROOF_BYTES=$(jq -r '.proof_bytes' proof.json) \
+PUBLIC_VALUES=$(jq -r '.public_values' proof.json) \
+forge script contracts/script/Submit.s.sol \
+  --rpc-url <RPC_URL> --broadcast
+```
 
 SP1 verifier gateway on Sepolia: `0x397A5f7f3dBd538f23DE225B51f532c34448dA9B`
 

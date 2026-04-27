@@ -240,13 +240,13 @@ flowchart TD
 
     subgraph Artifacts[4. proof.json]
         PB["proof_bytes - 260 bytes"]
-        PV["public_values - 96 bytes ABI-encoded"]
+        PV["public_values - 128 bytes ABI-encoded"]
         VK["program_vkey"]
     end
 
     subgraph OnChain[5. Ethereum Sepolia - network mode only]
         VER["SP1 Groth16 Verifier\n0x397A5f7f..."]
-        SOL["SolvencyAttestation.sol\nstores merkle_root, liabilities, assets, timestamp"]
+        SOL["SolvencyAttestation.sol\nstores merkleRoot, assetsCommitment, liabilities, assets, timestamp"]
         EVT["SolvencyProven event emitted\npermanent on-chain record"]
         VER -->|valid proof| SOL --> EVT
     end
@@ -256,13 +256,13 @@ flowchart TD
         CARD["Attestation card\nmerkle_root, surplus, Etherscan link"]
         FORM["Inclusion checker\nuser enters ID"]
         API["POST /api/verify"]
-        BIN["inclusion binary\nrebuilds Merkle tree locally"]
+        BROWSER["browser-native\nWeb Crypto API"]
         OK["Verified - balance confirmed"]
         FAIL["Not found or failed"]
         WEB --> CARD
-        WEB --> FORM --> API --> BIN
-        BIN -->|proof matches root| OK
-        BIN -->|no match| FAIL
+        WEB --> FORM --> API --> BROWSER
+        BROWSER -->|path verifies| OK
+        BROWSER -->|mismatch| FAIL
     end
 
     UJ --> MT

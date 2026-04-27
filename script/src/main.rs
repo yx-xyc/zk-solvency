@@ -47,5 +47,9 @@ async fn main() {
     });
     std::fs::write("proof.json", serde_json::to_string_pretty(&artifacts).unwrap()).unwrap();
     println!("Proof artifacts saved to proof.json");
-    println!("To submit on-chain: set CONTRACT_ADDRESS and run the forge deployment script.");
+    println!("To submit on-chain:");
+    println!("  CONTRACT_ADDRESS=0x... PRIVATE_KEY=0x... \\");
+    println!("  PROOF_BYTES=$(jq -r '.proof_bytes' proof.json) \\");
+    println!("  PUBLIC_VALUES=$(jq -r '.public_values' proof.json) \\");
+    println!("  forge script contracts/script/Submit.s.sol --rpc-url <RPC_URL> --broadcast");
 }
