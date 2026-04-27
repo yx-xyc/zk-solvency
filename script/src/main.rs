@@ -19,6 +19,7 @@ async fn main() {
         serde_json::from_str(&std::fs::read_to_string("data/reserves.json").unwrap()).unwrap();
 
     // 2. Set up prover (reads SP1_PROVER env var: "mock" or "network")
+    let mode = std::env::var("SP1_PROVER").unwrap_or_else(|_| "mock".into());
     let client = ProverClient::from_env().await;
     let pk = client.setup(Elf::Static(SOLVENCY_ELF)).await.unwrap();
     println!("Program vkey : {PROGRAM_VKEY}");
@@ -29,7 +30,6 @@ async fn main() {
     stdin.write(&reserves);
 
     // 4. Generate proof
-    let mode = std::env::var("SP1_PROVER").unwrap_or_else(|_| "mock".into());
     println!("Generating proof (SP1_PROVER={mode})...");
     let proof = client.prove(&pk, stdin).groth16().await.unwrap();
     println!("Proof generated.");

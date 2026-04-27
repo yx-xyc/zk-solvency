@@ -92,11 +92,18 @@ The integration script supports two proving modes, switched via a single environ
 
 Switching modes requires no code changes — just set the env var before running the script:
 ```bash
-SP1_PROVER=mock    cargo run -p script   # dev
-SP1_PROVER=network cargo run -p script   # production (also requires NETWORK_PRIVATE_KEY)
+# Proof generation (run from repo root — script/ is a separate Cargo workspace)
+SP1_PROVER=mock    cargo run --manifest-path script/Cargo.toml --bin script   # dev
+SP1_PROVER=network cargo run --manifest-path script/Cargo.toml --bin script   # production
 ```
 
-Mock proofs cannot be verified on-chain. On-chain submission is only performed when `SP1_PROVER=network` and `CONTRACT_ADDRESS` + `PRIVATE_KEY` env vars are set.
+Mock proofs cannot be verified on-chain. On-chain submission is a separate step via the Forge script:
+```bash
+CONTRACT_ADDRESS=0x... PRIVATE_KEY=0x... \
+PROOF_BYTES=$(jq -r '.proof_bytes' proof.json) \
+PUBLIC_VALUES=$(jq -r '.public_values' proof.json) \
+forge script contracts/script/Submit.s.sol --rpc-url <RPC_URL> --broadcast
+```
 
 ---
 

@@ -127,6 +127,8 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). The page reads `proof.json` from the repo root and displays the latest attestation. Users can enter any user ID to verify their balance inclusion — Merkle path verification runs in the browser using the Web Crypto API (no Rust binary needed).
 
+> **Demo scope note:** The inclusion checker is a demo UX. The server generates Merkle proof material per request and only returns the queried user's data; it is not a production-authenticated lookup service.
+
 ---
 
 ## Project Structure
