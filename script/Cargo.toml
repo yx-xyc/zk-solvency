@@ -16,7 +16,7 @@ name = "bench"
 path = "src/bench.rs"
 
 [dependencies]
-sp1-sdk    = { version = "6.1.0", default-features = false }
+sp1-sdk    = { version = "6.1.0", default-features = false, features = ["network"] }
 types      = { path = "../crates/types" }
 serde_json = "1"
 hex        = "0.4"
