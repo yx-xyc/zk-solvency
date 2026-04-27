@@ -12,20 +12,21 @@
 ### Step 2: SP1 zkVM Program ✅
 - **Private inputs**: `Vec<UserBalance>`, `Vec<ReserveBalance>`
 - **Program logic**:
-  1. Build Merkle tree from user balances → compute `merkle_root`
-  2. Sum all user balances → `total_liabilities`
-  3. Sum all reserve balances → `total_assets`
-  4. Assert `total_assets ≥ total_liabilities`
-- **Public outputs**: ABI-encoded `(bytes32 merkleRoot, uint64 totalLiabilities, uint64 totalAssets)`
+  1. Build Merkle tree from user balances → compute `merkleRoot`
+  2. Compute `assetsCommitment = SHA-256(reserve[0].id || reserve[0].balance || ...)`
+  3. Sum all user balances → `totalLiabilities`
+  4. Sum all reserve balances → `totalAssets`
+  5. Assert `totalAssets ≥ totalLiabilities`
+- **Public outputs** (128 bytes): ABI-encoded `(bytes32 merkleRoot, bytes32 assetsCommitment, uint64 totalLiabilities, uint64 totalAssets)`
 - `programVKey = 0x00680f24d7f1c5c844c2852e84244b6a34215092dc492599792cee4304fd15dd`
 
 ### Step 3: Solidity Smart Contract ✅
 - `SolvencyAttestation.sol` in `contracts/`:
-  - Stores latest attestation: `(merkleRoot, totalLiabilities, totalAssets, timestamp)`
+  - Stores latest attestation: `(merkleRoot, assetsCommitment, totalLiabilities, totalAssets, timestamp)`
   - `submitProof(bytes proofBytes, bytes publicValues)` — verifies via SP1 gateway, records on-chain
-  - Emits `SolvencyProven(bytes32 merkleRoot, uint64 totalLiabilities, uint64 totalAssets, uint256 timestamp)`
+  - Emits `SolvencyProven(bytes32 indexed merkleRoot, bytes32 assetsCommitment, uint64 totalLiabilities, uint64 totalAssets, uint256 timestamp)`
   - SP1 Groth16 gateway on Sepolia: `0x397A5f7f3dBd538f23DE225B51f532c34448dA9B`
-- 4 passing Forge tests (mock verifier + real public values from script)
+- 7 passing Forge tests: 4 happy-path + 3 negative (verifier rejection, malformed public values, zero initial state)
 
 ### Step 4: Integration Script ✅
 - `script/src/main.rs` — loads data, runs SP1 prover, saves `proof.json`
@@ -59,10 +60,11 @@ Results across N = 10 / 100 / 500 / 1000 / 5000 users — see `docs/benchmarks.m
 ### Step 7: Frontend (Next.js) ✅
 - `web/` — Next.js 16 App Router, TypeScript, Tailwind CSS
 - Home page (`/`):
-  - Attestation card: merkle root, total liabilities, total assets, surplus — decoded from `proof.json`
+  - Attestation card: merkle root, assets commitment, total liabilities, total assets — decoded from `proof.json` (128-byte public values)
   - Etherscan link to SP1 Groth16 verifier gateway on Sepolia
-- Inclusion checker:
-  - User enters ID → `POST /api/verify` → API route spawns `inclusion` binary → returns JSON
+- Inclusion checker (browser-native, no Rust binary):
+  - User enters ID → `POST /api/verify` → API generates Merkle proof server-side, returns single user's proof material only
+  - Client re-derives leaf hash from server-reported balance to detect tampering, then verifies sibling path against on-chain `merkleRoot` using `_lib/merkle.ts` + Web Crypto API
   - Green ✓ panel: balance, leaf hash, merkle root, proof depth
   - Red ✗ panel: user not found or verification failed
 

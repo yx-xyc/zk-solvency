@@ -3,9 +3,9 @@ sp1_zkvm::entrypoint!(main);
 
 use alloy_sol_types::SolType;
 use alloy_sol_types::sol_data::{FixedBytes, Uint};
-use types::{ReserveBalance, UserBalance, merkle::MerkleTree};
+use types::{ReserveBalance, UserBalance, assets_commitment, merkle::MerkleTree};
 
-type PublicValuesTuple = (FixedBytes<32>, Uint<64>, Uint<64>);
+type PublicValuesTuple = (FixedBytes<32>, FixedBytes<32>, Uint<64>, Uint<64>);
 
 pub fn main() {
     let users: Vec<UserBalance>       = sp1_zkvm::io::read();
@@ -19,6 +19,12 @@ pub fn main() {
 
     assert!(total_assets >= total_liabilities, "insolvent");
 
-    let encoded = PublicValuesTuple::abi_encode(&(merkle_root, total_liabilities, total_assets));
+    let commitment: [u8; 32] = assets_commitment(&reserves);
+    let encoded = PublicValuesTuple::abi_encode(&(
+        merkle_root,
+        commitment,
+        total_liabilities,
+        total_assets,
+    ));
     sp1_zkvm::io::commit_slice(&encoded);
 }

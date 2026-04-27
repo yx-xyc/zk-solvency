@@ -4,17 +4,19 @@ import InclusionChecker from '../_components/InclusionChecker'
 
 interface Attestation {
   merkleRoot: string
+  assetsCommitment: string
   totalLiabilities: bigint
   totalAssets: bigint
 }
 
 function decodePublicValues(hex: string): Attestation | null {
   const raw = hex.replace(/^0x/i, '')
-  if (raw.length < 192) return null
+  if (raw.length < 256) return null
   return {
     merkleRoot:       '0x' + raw.slice(0, 64),
-    totalLiabilities: BigInt('0x' + raw.slice(64, 128)),
-    totalAssets:      BigInt('0x' + raw.slice(128, 192)),
+    assetsCommitment: '0x' + raw.slice(64, 128),
+    totalLiabilities: BigInt('0x' + raw.slice(128, 192)),
+    totalAssets:      BigInt('0x' + raw.slice(192, 256)),
   }
 }
 
@@ -48,6 +50,10 @@ export default function Home() {
                 <div className="sm:col-span-2">
                   <dt className="text-gray-500 font-medium mb-0.5">Merkle Root</dt>
                   <dd className="font-mono text-gray-800 text-xs break-all">{attestation.merkleRoot}</dd>
+                </div>
+                <div className="sm:col-span-2">
+                  <dt className="text-gray-500 font-medium mb-0.5">Assets Commitment</dt>
+                  <dd className="font-mono text-gray-800 text-xs break-all">{attestation.assetsCommitment}</dd>
                 </div>
                 <div>
                   <dt className="text-gray-500 font-medium mb-0.5">Total Liabilities</dt>
@@ -90,7 +96,7 @@ export default function Home() {
           <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
             Verify Your Inclusion
           </h2>
-          <InclusionChecker />
+          <InclusionChecker merkleRoot={attestation?.merkleRoot ?? ''} />
           <p className="mt-3 text-xs text-gray-400">
             Enter any user ID from 0 to 99 to verify that their balance is committed in the Merkle root above.
           </p>

@@ -14,21 +14,21 @@ Build a simplified proof-of-solvency protocol using the SP1 zkVM with on-chain v
 ## Architecture
 
 ```
-Private Inputs                  SP1 zkVM Program              Public Outputs
-─────────────────               ─────────────────             ─────────────────
-User balances (liabilities) ──► Recompute Merkle root    ──► merkle_root
-Reserve balances (assets)   ──► Sum liabilities & assets ──► total_liabilities
-                                Verify assets ≥ liabilities ► total_assets
-                                                         ──► surplus
+Private Inputs                  SP1 zkVM Program              Public Outputs (128 bytes)
+─────────────────               ─────────────────             ──────────────────────────
+User balances (liabilities) ──► Build SHA-256 Merkle tree ──► merkleRoot       (bytes32)
+Reserve balances (assets)   ──► Compute assets commitment ──► assetsCommitment (bytes32)
+                                Sum liabilities & assets  ──► totalLiabilities (uint64)
+                                Assert assets ≥ liabilities ► totalAssets      (uint64)
                                         │
                                         ▼
-                               ZK Proof (STARK)
+                               ZK Proof (Groth16)
                                         │
                                         ▼
-                            Solidity Verifier Contract
-                            - Verifies SP1 proof
-                            - Records attestation on-chain
-                              (merkle_root, timestamp, valid)
+                            SolvencyAttestation.sol
+                            - Verifies SP1 proof on-chain
+                            - Stores attestation (merkleRoot,
+                              assetsCommitment, totals, timestamp)
 ```
 
 ---

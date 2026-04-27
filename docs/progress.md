@@ -28,8 +28,8 @@
 ### Step 2 — SP1 zkVM Program ✅
 - `crates/program` targeting `riscv32im-succinct-zkvm-elf`
 - Reads `Vec<UserBalance>` and `Vec<ReserveBalance>` as private inputs via `sp1_zkvm::io::read()`
-- Rebuilds Merkle root, sums liabilities and assets, asserts solvency
-- Commits ABI-encoded public outputs: `(merkle_root, total_liabilities, total_assets)`
+- Rebuilds Merkle root, computes assets commitment, sums both sides, asserts solvency
+- Commits ABI-encoded public outputs (128 bytes): `(merkleRoot, assetsCommitment, totalLiabilities, totalAssets)`
 - ELF at `target/elf-compilation/riscv64im-succinct-zkvm-elf/release/solvency-program`
 - `programVKey = 0x00680f24d7f1c5c844c2852e84244b6a34215092dc492599792cee4304fd15dd`
 
@@ -38,8 +38,9 @@
 - `SolvencyAttestation.sol`:
   - Constructor takes SP1 Groth16 gateway address + `programVKey`
   - `submitProof(proofBytes, publicValues)` — verifies proof via SP1 gateway, stores attestation, emits `SolvencyProven` event
+  - `Attestation` struct: `{merkleRoot, assetsCommitment, totalLiabilities, totalAssets, timestamp}`
   - SP1 Groth16 gateway on Sepolia: `0x397A5f7f3dBd538f23DE225B51f532c34448dA9B`
-- 4 passing unit tests (mock verifier, including one using real script-generated public values)
+- 7 passing unit tests: 4 happy-path (store, event, real blob, overwrite) + 3 negative (verifier rejection, malformed input, zero-initial state)
 
 ### Step 4 — Integration Script ✅
 - `script/` — standalone Cargo workspace (separate from root to avoid serde_core conflict with sp1-sdk)
@@ -75,10 +76,11 @@
 
 ### Step 7 — Next.js Frontend ✅
 - `web/` — Next.js 16 App Router, TypeScript, Tailwind CSS
-- Server component reads `proof.json`, decodes ABI-encoded public_values, renders attestation card
-- Client component (`InclusionChecker`) handles form state and fetches `/api/verify`
-- API route (`app/api/verify/route.ts`) spawns the `inclusion` Rust binary as a subprocess, parses stdout
-- Verified end-to-end: attestation card shows correct merkle root/totals; user ID 42 → ✓ included; user ID 9999 → ✗ not found
+- Server component reads `proof.json`, decodes ABI-encoded public_values (128 bytes), renders attestation card with `merkleRoot`, `assetsCommitment`, totals
+- `POST /api/verify` — generates one user's Merkle proof server-side; returns only that user's balance, leaf hash, siblings, and path bits (no bulk data leak)
+- Client component (`InclusionChecker`) re-derives the leaf hash independently from the server-reported balance (detects server lying), then verifies the sibling path against the on-chain `merkleRoot` using the Web Crypto API — no Rust binary, no subprocess
+- `_lib/merkle.ts` — TypeScript Merkle tree mirroring `crates/types/src/merkle.rs` (repeat-last-leaf padding, SHA-256 via `crypto.subtle`)
+- System fonts only (offline-safe; no Google Fonts dependency)
 - Start with: `cd web && npm run dev` → http://localhost:3000
 
 ---
@@ -97,8 +99,23 @@
 
 ## Key Decisions & Notes
 - Using SHA256 (not Keccak256) for Merkle tree — SP1 has a SHA256 precompile (cheaper cycles)
-- Merkle tree pads to next power of two by repeating the last leaf hash
-- Public values are ABI-encoded (`abi.encode(bytes32, uint64, uint64)`) for Solidity compatibility
+- Merkle tree pads to next power of two by repeating the last leaf hash (critical: TypeScript must match)
+- Public values are ABI-encoded (`abi.encode(bytes32, bytes32, uint64, uint64)`) — 128 bytes total
+- `assetsCommitment` hashes each reserve's `id` AND `balance` so different reserve sets with equal totals produce different commitments
+- Inclusion verification is browser-native (Web Crypto API) — no `inclusion` binary needed at runtime
+- API returns only one user's proof material; leaf hash is re-derived client-side to prevent server lying
 - Proving mode: `SP1_PROVER=mock` for dev (instant), `SP1_PROVER=network` for real proof (cloud GPU)
 - `data/` is gitignored (generated files); `contracts/lib/` is gitignored (reinstall with `forge install`)
 - No `Co-Authored-By` in commits (user preference)
+
+---
+
+## Improvements (post Phase 3)
+
+- **Reserve identity in `assets_commitment`**: Previously only hashed balances; now includes each reserve's `id` so commitment is order-sensitive and identity-binding
+- **JS number precision guards**: `POST /api/verify` validates `userId` with `Number.isSafeInteger` before processing
+- **Data-gen input validation**: `--users`, `--reserves` must be ≥ 1; `--surplus` must be ≥ 0 — fails fast with a clear error message
+- **zkVM insolvency test binary**: `script/src/test_insolvency.rs` — verifies via SP1 `execute()` that insolvent inputs cause a guest panic, producing zero committed bytes
+- **Negative Solidity tests**: 3 new forge tests covering verifier rejection, malformed public values, and zero-initial attestation state
+- **Offline-safe build**: Replaced `next/font/google` with system font CSS variables — build succeeds without internet access
+- **ESLint 9 flat config**: `web/eslint.config.mjs` using native flat config format
