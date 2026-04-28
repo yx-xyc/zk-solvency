@@ -23,6 +23,8 @@ fn stdin_for(users: &Vec<UserBalance>, reserves: &Vec<ReserveBalance>) -> SP1Std
 
 #[tokio::main]
 async fn main() {
+    std::env::var("SP1_PROVER")
+        .expect("SP1_PROVER must be set — use 'mock' for dev or 'network' for production");
     let client = ProverClient::from_env().await;
 
     // ── Solvent: assets > liabilities ────────────────────────────────────────
