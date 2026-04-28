@@ -17,10 +17,12 @@ fn make_inputs(n: usize) -> (Vec<UserBalance>, Vec<ReserveBalance>) {
 
 #[tokio::main]
 async fn main() {
+    let mode = std::env::var("SP1_PROVER")
+        .expect("SP1_PROVER must be set — use 'mock' for dev or 'network' for production");
     let client = ProverClient::from_env().await;
     let pk = client.setup(Elf::Static(SOLVENCY_ELF)).await.unwrap();
 
-    println!("SP1 mock proof generation time (SP1_PROVER=mock)\n");
+    println!("SP1 proof generation time (SP1_PROVER={mode})\n");
     println!("{:<8} {:>20}", "N", "time (s)");
     println!("{}", "-".repeat(30));
 
@@ -32,7 +34,7 @@ async fn main() {
         stdin.write(&reserves);
 
         let start = std::time::Instant::now();
-        client.prove(&pk, stdin).groth16().await.unwrap();
+        client.prove(&pk, stdin).plonk().await.unwrap();
         let elapsed = start.elapsed();
 
         println!("{:<8} {:>20.3}", n, elapsed.as_secs_f64());

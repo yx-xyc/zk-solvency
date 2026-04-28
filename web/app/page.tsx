@@ -118,7 +118,7 @@ export default function Home() {
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-sm text-amber-800">
               <p className="font-semibold mb-1">No proof found</p>
               <p className="font-mono text-xs text-amber-700">
-                SP1_PROVER=mock cargo run --manifest-path script/Cargo.toml
+                SP1_PROVER=mock cargo run --manifest-path script/Cargo.toml --bin script
               </p>
             </div>
           )}
