@@ -39,8 +39,9 @@ flowchart LR
 
     subgraph Public[Public Outputs]
         O1["merkle_root"]
-        O2["total_liabilities"]
-        O3["total_assets"]
+        O2["assets_commitment"]
+        O3["total_liabilities"]
+        O4["total_assets"]
     end
 
     subgraph Chain[Ethereum Sepolia]
@@ -50,8 +51,8 @@ flowchart LR
 
     U --> ZK
     R --> ZK
-    ZK --> O1 & O2 & O3
-    O1 & O2 & O3 --> V
+    ZK --> O1 & O2 & O3 & O4
+    O1 & O2 & O3 & O4 --> V
     V -->|verified| C
 ```
 
@@ -233,7 +234,7 @@ flowchart TD
         MT["Build SHA256 Merkle tree"]
         SUM["Sum liabilities and assets"]
         ASSERT["Assert assets >= liabilities"]
-        PUB["Commit public outputs:\nmerkle_root, total_liabilities, total_assets"]
+        PUB["Commit public outputs:\nmerkle_root, assets_commitment, total_liabilities, total_assets"]
         MT --> SUM --> ASSERT --> PUB
     end
 
