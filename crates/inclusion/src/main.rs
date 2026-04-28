@@ -34,8 +34,8 @@ fn extract_merkle_root(pv_hex: &str) -> Result<[u8; 32], String> {
     if bytes.len() < 32 {
         return Err(format!("public_values too short: {} bytes (need at least 32)", bytes.len()));
     }
-    // ABI layout: bytes32 merkleRoot || uint256(liabilities) || uint256(assets)
-    // bytes32 occupies the first 32 bytes directly — no offset needed.
+    // ABI layout: bytes32 merkleRoot || bytes32 assetsCommitment || uint64 liabilities || uint64 assets
+    // merkleRoot occupies the first 32 bytes directly — no offset needed.
     Ok(bytes[..32].try_into().unwrap())
 }
 
