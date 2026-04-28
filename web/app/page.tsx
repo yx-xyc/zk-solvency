@@ -100,12 +100,12 @@ export default function Home() {
                 ) : (
                   <>
                     <a
-                      href="https://sepolia.etherscan.io/address/0x397A5f7f3dBd538f23DE225B51f532c34448dA9B"
+                      href="https://sepolia.etherscan.io/address/0xd685a80aF2d1761648e56716af4868d850Dae49B"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
                     >
-                      View SP1 Groth16 Verifier on Sepolia ↗
+                      View SP1 PLONK Verifier Gateway on Sepolia ↗
                     </a>
                     <p className="text-xs text-gray-400 mt-1">
                       On-chain submission pending — create deployment.json to show the tx link
