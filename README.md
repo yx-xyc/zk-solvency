@@ -88,7 +88,7 @@ The PLONK proof is 964 bytes. The first 4 bytes (`5a093a2f`) are the SP1 v6.1.0 
   <864 bytes of Gnark PLONK proof>
 ```
 
-Full `proof_bytes` are stored in `proof.json` in the repo root.
+Full `proof_bytes` are stored in `proof.json` (committed, network mode output) in the repo root.
 
 ---
 
@@ -145,6 +145,7 @@ The ELF is compiled to `target/elf-compilation/riscv64im-succinct-zkvm-elf/relea
 ```bash
 SP1_PROVER=mock cargo run --manifest-path script/Cargo.toml --bin script
 ```
+Writes to `proof.mock.json` (gitignored). Mock proofs have empty `proof_bytes` and cannot be submitted on-chain.
 
 **Network mode** (real PLONK proof via Succinct Prover Network, ~5–15 min):
 ```bash
@@ -152,8 +153,9 @@ SP1_PROVER=network \
 NETWORK_PRIVATE_KEY=<your_succinct_wallet_key> \
 cargo run --manifest-path script/Cargo.toml --bin script
 ```
+Writes to `proof.json` (committed). The two output files are intentionally separate so a dev mock run can never overwrite a real proof.
 
-Both modes write `proof.json` to the repo root:
+Both files share the same schema:
 ```json
 {
   "proof_bytes":   "0x5a093a2f...",

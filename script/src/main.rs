@@ -39,17 +39,22 @@ async fn main() {
     println!("proof_bytes   ({} bytes): 0x{}", proof_bytes.len(),   hex::encode(&proof_bytes));
     println!("public_values ({} bytes): 0x{}", public_values.len(), hex::encode(&public_values));
 
-    // 5. Save proof artifacts for on-chain submission (via forge script)
+    // 5. Save proof artifacts — mock goes to proof.mock.json, network to proof.json.
+    //    Keeping them separate prevents a dev mock run from overwriting a real proof.
+    let out_file = if mode == "mock" { "proof.mock.json" } else { "proof.json" };
     let artifacts = serde_json::json!({
         "proof_bytes":   format!("0x{}", hex::encode(&proof_bytes)),
         "public_values": format!("0x{}", hex::encode(&public_values)),
         "program_vkey":  program_vkey,
     });
-    std::fs::write("proof.json", serde_json::to_string_pretty(&artifacts).unwrap()).unwrap();
-    println!("Proof artifacts saved to proof.json");
-    println!("To submit on-chain:");
-    println!("  CONTRACT_ADDRESS=0x... PRIVATE_KEY=0x... \\");
-    println!("  PROOF_BYTES=$(jq -r '.proof_bytes' proof.json) \\");
-    println!("  PUBLIC_VALUES=$(jq -r '.public_values' proof.json) \\");
-    println!("  forge script contracts/script/Submit.s.sol --rpc-url <RPC_URL> --broadcast");
+    std::fs::write(out_file, serde_json::to_string_pretty(&artifacts).unwrap()).unwrap();
+    println!("Proof artifacts saved to {out_file}");
+    if mode != "mock" {
+        println!("To submit on-chain:");
+        println!("  CONTRACT_ADDRESS=0x... PRIVATE_KEY=0x... \\");
+        println!("  PROOF_BYTES=$(jq -r '.proof_bytes' proof.json) \\");
+        println!("  PUBLIC_VALUES=$(jq -r '.public_values' proof.json) \\");
+        println!("  forge script contracts/script/Submit.s.sol:Submit \\");
+        println!("    --root contracts --rpc-url <RPC_URL> --broadcast");
+    }
 }

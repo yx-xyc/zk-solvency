@@ -24,8 +24,8 @@ contracts/lib/
 script/target/
 script/Cargo.lock
 
-# Generated proof artifacts
-proof.json
+# Mock proof artifacts (dev only — not verifiable on-chain)
+proof.mock.json
 
 # Next.js frontend
 web/node_modules/
