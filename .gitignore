@@ -9,6 +9,9 @@
 contracts/out/
 contracts/cache/
 
+# Foundry broadcast logs (per-run deployment records — key facts are in deployment.json)
+contracts/broadcast/
+
 # Foundry dependencies (reinstall with: cd contracts && forge install succinctlabs/sp1-contracts --no-git)
 contracts/lib/
 
