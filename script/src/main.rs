@@ -18,8 +18,9 @@ async fn main() {
     let reserves: Vec<ReserveBalance> =
         serde_json::from_str(&std::fs::read_to_string("data/reserves.json").unwrap()).unwrap();
 
-    // 2. Set up prover (reads SP1_PROVER env var: "mock" or "network")
-    let mode = std::env::var("SP1_PROVER").unwrap_or_else(|_| "mock".into());
+    // 2. Set up prover (SP1_PROVER must be set explicitly: "mock" or "network")
+    let mode = std::env::var("SP1_PROVER")
+        .expect("SP1_PROVER must be set — use 'mock' for dev or 'network' for production");
     let client = ProverClient::from_env().await;
     let pk = client.setup(Elf::Static(SOLVENCY_ELF)).await.unwrap();
     println!("Program vkey : {PROGRAM_VKEY}");
