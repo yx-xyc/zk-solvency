@@ -137,10 +137,7 @@ cd ../..
 
 The ELF is compiled to `target/elf-compilation/riscv64im-succinct-zkvm-elf/release/solvency-program` and baked into the script binary via `include_bytes!`.
 
-**Important:** if you rebuild the ELF, the program vkey changes. Update `PROGRAM_VKEY` in `script/src/main.rs` and `contracts/script/Deploy.s.sol` by running:
-```bash
-cargo prove vkey --elf target/elf-compilation/riscv64im-succinct-zkvm-elf/release/solvency-program
-```
+**Note:** if you rebuild the ELF, the program vkey changes automatically — `script/src/main.rs` derives it live from the proving key, and `Deploy.s.sol` reads it from `proof.json` at deploy time. No constants need updating.
 
 ### 3. Generate a ZK proof
 
@@ -252,13 +249,9 @@ Solidity ABI encoding (`abi.encode(bytes32, bytes32, uint64, uint64)`): each fie
 
 ### Program verification key
 
-The program vkey is a hash of the compiled zkVM circuit (ELF). It is deterministic for a given ELF:
+The program vkey is a hash of the compiled zkVM circuit (ELF). It is deterministic for a given ELF. `script/src/main.rs` derives it at runtime from `pk.vk.bytes32()` and writes it into `proof.json`. `Deploy.s.sol` reads it back via `PROGRAM_VKEY=$(jq -r '.program_vkey' proof.json)`, so the deployed contract always stores the vkey that matches the proof — no constants to keep in sync.
 
-```
-Current vkey: 0x0098ee1f091411258d9318cb9a146c4e48145cee16b45a774d0445772cbfca4f
-```
-
-This value must match what is stored in the deployed `SolvencyAttestation` contract. If the ELF is ever rebuilt, recompute with `cargo prove vkey --elf <path>` and redeploy.
+Current vkey (for the ELF in this repo): `0x0098ee1f091411258d9318cb9a146c4e48145cee16b45a774d0445772cbfca4f`
 
 ---
 
@@ -294,18 +287,6 @@ export NETWORK_PRIVATE_KEY=0x<your_wallet_private_key>
 export SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/<your_key>
 ```
 
-### Step 0 — Verify the program vkey
-
-Before deploying, confirm the vkey matches the ELF you intend to prove:
-
-```bash
-cargo prove vkey --elf target/elf-compilation/riscv64im-succinct-zkvm-elf/release/solvency-program
-# Verification Key Hash:
-# 0x0098ee1f091411258d9318cb9a146c4e48145cee16b45a774d0445772cbfca4f
-```
-
-This value must be set in `contracts/script/Deploy.s.sol` as `PROGRAM_VKEY` before deployment. A mismatch will cause every `submitProof` call to fail with `InvalidProof`.
-
 ### Step 1 — Generate the proof
 
 ```bash
@@ -315,17 +296,19 @@ NETWORK_PRIVATE_KEY=$NETWORK_PRIVATE_KEY \
 cargo run --manifest-path script/Cargo.toml --bin script
 ```
 
-This writes `proof.json` with `proof_bytes`, `public_values`, and `program_vkey`.
+This writes `proof.json` with `proof_bytes`, `public_values`, and `program_vkey`. The vkey is derived live from `pk.vk.bytes32()` — it is never hardcoded in source.
 
 ### Step 2 — Deploy the contract
 
 ```bash
 source .env
-cd contracts
 PRIVATE_KEY=$NETWORK_PRIVATE_KEY \
-forge script script/Deploy.s.sol:Deploy \
-  --rpc-url $SEPOLIA_RPC_URL --broadcast
+PROGRAM_VKEY=$(jq -r '.program_vkey' proof.json) \
+forge script contracts/script/Deploy.s.sol:Deploy \
+  --root contracts --rpc-url $SEPOLIA_RPC_URL --broadcast
 ```
+
+`PROGRAM_VKEY` is read from `proof.json` at deploy time, so the contract always stores exactly the vkey that matches the proof. The script also prints the vkey it used, so you can cross-check.
 
 Copy the printed contract address. The script deploys `SolvencyAttestation` with the SP1 PLONK verifier gateway and the program vkey baked in as immutables.
 
@@ -376,9 +359,9 @@ The web UI reads this file at build time and renders a clickable Etherscan link 
 
 ### `InvalidProof` on `submitProof`
 
-The most common cause is a stale `programVKey`. The vkey must exactly match the ELF that was used to generate the proof. If the ELF was ever rebuilt (e.g. after editing `crates/program/src/main.rs`) the vkey changes, and a contract deployed with the old vkey will reject all new proofs.
+The most common cause is a `programVKey` mismatch: the vkey stored in the contract doesn't match the one the proof was generated for. This can happen if the ELF was rebuilt between proving and deploying, or if the deploy script was run with a stale vkey.
 
-**Fix:** run `cargo prove vkey --elf <path>`, update `PROGRAM_VKEY` in `Deploy.s.sol`, redeploy the contract, and submit the proof again. The existing `proof.json` remains valid — you only need a new contract, not a new proof.
+With the current setup this should not happen — `script/src/main.rs` derives the vkey live and writes it to `proof.json`, and `Deploy.s.sol` reads it from there. If you see `InvalidProof`, verify the vkey in `deployment.json` matches `proof.json`, and if not, redeploy the contract (the existing proof is still valid).
 
 ### SP1 PLONK vs Groth16
 

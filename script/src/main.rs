@@ -6,10 +6,6 @@ const SOLVENCY_ELF: &[u8] = include_bytes!(
     "../../target/elf-compilation/riscv64im-succinct-zkvm-elf/release/solvency-program"
 );
 
-// Obtained via `cargo prove vkey` — must match SolvencyAttestation constructor.
-const PROGRAM_VKEY: &str =
-    "0x0098ee1f091411258d9318cb9a146c4e48145cee16b45a774d0445772cbfca4f";
-
 #[tokio::main]
 async fn main() {
     // 1. Load data
@@ -23,7 +19,10 @@ async fn main() {
         .expect("SP1_PROVER must be set — use 'mock' for dev or 'network' for production");
     let client = ProverClient::from_env().await;
     let pk = client.setup(Elf::Static(SOLVENCY_ELF)).await.unwrap();
-    println!("Program vkey : {PROGRAM_VKEY}");
+
+    // Derive vkey directly from the proving key — never hardcoded.
+    let program_vkey = format!("0x{}", hex::encode(pk.vk.bytes32()));
+    println!("Program vkey : {program_vkey}");
 
     // 3. Write private inputs
     let mut stdin = SP1Stdin::new();
@@ -44,7 +43,7 @@ async fn main() {
     let artifacts = serde_json::json!({
         "proof_bytes":   format!("0x{}", hex::encode(&proof_bytes)),
         "public_values": format!("0x{}", hex::encode(&public_values)),
-        "program_vkey":  PROGRAM_VKEY,
+        "program_vkey":  program_vkey,
     });
     std::fs::write("proof.json", serde_json::to_string_pretty(&artifacts).unwrap()).unwrap();
     println!("Proof artifacts saved to proof.json");
