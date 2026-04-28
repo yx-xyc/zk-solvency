@@ -44,8 +44,8 @@ flowchart LR
     end
 
     subgraph Chain[Ethereum Sepolia]
-        V["SP1 Groth16 Verifier"]
-        C["SolvencyAttestation.sol"]
+        V["SP1 PLONK Verifier Gateway\n0xd685a80a..."]
+        C["SolvencyAttestation.sol\n0x97d55Ff7..."]
     end
 
     U --> ZK
@@ -58,7 +58,7 @@ flowchart LR
 Walk through left to right:
 1. Exchange feeds private inputs into the SP1 zkVM
 2. The program builds a Merkle tree, sums both sides, asserts solvency
-3. SP1 generates a Groth16 ZK proof (~260 bytes)
+3. SP1 generates a PLONK ZK proof (964 bytes, constant size)
 4. The on-chain verifier checks the proof — if valid, the attestation is recorded permanently
 
 **Key property**: the proof is *unforgeable*. You cannot produce a valid proof if assets < liabilities.
@@ -95,11 +95,13 @@ The Merkle root is a fingerprint of *all* user balances. Once it is on-chain:
 
 Live walkthrough of `http://localhost:3000`:
 
-1. **Attestation card** — merkle root, total liabilities, total assets, surplus, link to Sepolia Etherscan
+1. **Attestation card** — merkle root, total liabilities (501,258), total assets (601,509), surplus (+100,251), live Etherscan link to the `SolvencyProven` tx
 2. **Inclusion checker** — enter user ID `42` → green panel: balance, leaf hash, proof depth, merkle root matches attestation card
 3. **Inclusion checker** — enter `9999` → red panel: not found
 
-Point out: the API route calls the compiled Rust `inclusion` binary — same SHA256 Merkle logic as the zkVM program — so the inclusion check is trustless end-to-end.
+Point out: the sibling path is verified in the browser using the Web Crypto API — no server trust required after the proof material is returned.
+
+**On-chain proof**: https://sepolia.etherscan.io/tx/0xb952c483e839b5cfbe3694ac4e3a3ace9a643d2dea2273d867dd5c5ea8f43ea3
 
 ---
 
@@ -111,7 +113,7 @@ Point out: the API route calls the compiled Rust `inclusion` binary — same SHA
 | Inclusion prove | O(log N) | ~0.14 µs | ~0.14 µs |
 | Inclusion verify | O(log N) | ~3 µs | ~3 µs |
 | SP1 mock execution | ~O(N) | 0.07 s | 27 s |
-| On-chain gas | constant | ~97k (mock) | ~250k (Groth16) |
+| On-chain gas | constant | ~97k (mock) | ~250k (PLONK) |
 
 Key insight: **prove/verify are essentially constant** — users do not pay a scaling cost. The exchange bears the O(N) proof generation cost, not users.
 
@@ -141,10 +143,15 @@ Added:
 
 **What was built**: end-to-end ZK solvency system — data generation → zkVM proof → on-chain attestation → user inclusion verification → web UI
 
+**Deployed on Sepolia**:
+- Contract: `0x97d55Ff73f7592F85AafF025a94963d02266cC78`
+- Real PLONK proof verified on-chain — tx `0xb952c483…`
+- Full pipeline: mock dev mode → network proof → deploy → submit → web UI with live Etherscan link
+
 **What is left for production**:
-- Deploy `SolvencyAttestation.sol` to Sepolia, run `SP1_PROVER=network` for real Groth16
-- Periodic attestation cadence (daily/weekly)
+- Periodic attestation cadence (daily/weekly automation)
 - ECDSA signature over the Merkle root to bind prover identity
+- User authentication for the inclusion checker (currently open by ID)
 
 ---
 
@@ -161,7 +168,7 @@ Added:
 | Wrap-up | 30 sec |
 | **Total** | ~9 min |
 
-The demo is the strongest segment — let it breathe. If a live `proof.json` is present, the attestation card makes the on-chain connection tangible immediately.
+The demo is the strongest segment — let it breathe. With `deployment.json` present, the attestation card shows the live Etherscan link immediately.
 
 ---
 
@@ -197,7 +204,7 @@ flowchart TD
     PROGRAM -->|compiled ELF| SCRIPT
     SCRIPT -->|proof artifacts| SOL
     SCRIPT -->|network mode| SPNET
-    SPNET -->|Groth16 proof| SCRIPT
+    SPNET -->|PLONK proof| SCRIPT
     SOL -->|submitProof| SEPOLIA
 ```
 
@@ -205,8 +212,8 @@ flowchart TD
 
 - `crates/types` is the single shared library — all four crates depend on it, no duplication of `UserBalance`, `MerkleTree`, etc.
 - `script/` is an isolated workspace (separate from root) to avoid a `serde_core` conflict between sp1-sdk and alloy. It re-imports `crates/types` via path dependency.
-- `web/` bridges the Rust and TypeScript worlds at runtime by spawning the `inclusion` binary as a subprocess — no Merkle logic reimplemented in TypeScript.
-- `proof.json` is the central artifact connecting the Rust proof pipeline to both the Solidity contract and the web frontend.
+- `web/` bridges the Rust and TypeScript worlds at runtime via the `/api/verify` route, which runs Merkle proof generation server-side in Rust-derived TypeScript logic — no subprocess.
+- `proof.json` is the central artifact connecting the Rust proof pipeline to both the Solidity contract and the web frontend. `program_vkey` in `proof.json` is derived live from `pk.vk.bytes32()` — never hardcoded.
 
 ---
 
@@ -233,21 +240,21 @@ flowchart TD
     subgraph ProofGen[3. Proof Generation]
         ENV{SP1_PROVER}
         MOCK["Mock prover\nInstant - dev only\nNot verifiable on-chain"]
-        NET["Succinct GPU cluster\n30-60s - costs 0.3031 PROVE\nReal Groth16 - 260 bytes"]
+        NET["Succinct GPU cluster\n~5-15 min - costs ~0.3 PROVE\nReal PLONK - 964 bytes"]
         ENV -->|mock| MOCK
         ENV -->|network| NET
     end
 
     subgraph Artifacts[4. proof.json]
-        PB["proof_bytes - 260 bytes"]
+        PB["proof_bytes - 964 bytes"]
         PV["public_values - 128 bytes ABI-encoded"]
-        VK["program_vkey"]
+        VK["program_vkey - derived from pk.vk.bytes32()"]
     end
 
-    subgraph OnChain[5. Ethereum Sepolia - network mode only]
-        VER["SP1 Groth16 Verifier\n0x397A5f7f..."]
-        SOL["SolvencyAttestation.sol\nstores merkleRoot, assetsCommitment, liabilities, assets, timestamp"]
-        EVT["SolvencyProven event emitted\npermanent on-chain record"]
+    subgraph OnChain[5. Ethereum Sepolia]
+        VER["SP1 PLONK Verifier Gateway\n0xd685a80aF2d..."]
+        SOL["SolvencyAttestation.sol\n0x97d55Ff73f7592F8...\nstores merkleRoot, assetsCommitment, liabilities, assets, timestamp"]
+        EVT["SolvencyProven event emitted\ntx 0xb952c483...\npermanent on-chain record"]
         VER -->|valid proof| SOL --> EVT
     end
 

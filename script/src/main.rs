@@ -1,4 +1,4 @@
-use sp1_sdk::{Elf, ProveRequest, Prover, ProverClient, SP1Stdin};
+use sp1_sdk::{Elf, HashableKey, ProveRequest, Prover, ProverClient, ProvingKey, SP1Stdin};
 use types::{ReserveBalance, UserBalance};
 
 // Pre-compiled ELF — run `cargo prove build` in crates/program to regenerate.
@@ -21,7 +21,7 @@ async fn main() {
     let pk = client.setup(Elf::Static(SOLVENCY_ELF)).await.unwrap();
 
     // Derive vkey directly from the proving key — never hardcoded.
-    let program_vkey = format!("0x{}", hex::encode(pk.vk.bytes32()));
+    let program_vkey = pk.verifying_key().bytes32();
     println!("Program vkey : {program_vkey}");
 
     // 3. Write private inputs

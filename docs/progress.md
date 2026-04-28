@@ -1,7 +1,7 @@
 # Development Progress
 
 ## Current Status
-**Phase 1 — Core ZK Solvency** ✅ Complete
+**All Phases Complete** ✅ — including Sepolia on-chain deployment
 
 ---
 
@@ -31,25 +31,26 @@
 - Rebuilds Merkle root, computes assets commitment, sums both sides, asserts solvency
 - Commits ABI-encoded public outputs (128 bytes): `(merkleRoot, assetsCommitment, totalLiabilities, totalAssets)`
 - ELF at `target/elf-compilation/riscv64im-succinct-zkvm-elf/release/solvency-program`
-- `programVKey = 0x0098ee1f091411258d9318cb9a146c4e48145cee16b45a774d0445772cbfca4f`
+- `programVKey` derived at runtime from `pk.vk.bytes32()` — current value: `0x0098ee1f091411258d9318cb9a146c4e48145cee16b45a774d0445772cbfca4f`
 
 ### Step 3 — Solidity Smart Contract ✅
 - Foundry project in `contracts/`
 - `SolvencyAttestation.sol`:
-  - Constructor takes SP1 Groth16 gateway address + `programVKey`
-  - `submitProof(proofBytes, publicValues)` — verifies proof via SP1 gateway, stores attestation, emits `SolvencyProven` event
+  - Constructor takes SP1 PLONK gateway address + `programVKey`
+  - `submitProof(proofBytes, publicValues)` — verifies proof via SP1 PLONK gateway, stores attestation, emits `SolvencyProven` event
   - `Attestation` struct: `{merkleRoot, assetsCommitment, totalLiabilities, totalAssets, timestamp}`
-  - SP1 Groth16 gateway on Sepolia: `0x397A5f7f3dBd538f23DE225B51f532c34448dA9B`
+  - SP1 PLONK gateway on Sepolia: `0xd685a80aF2d1761648e56716af4868d850Dae49B`
 - 7 passing unit tests: 4 happy-path (store, event, real blob, overwrite) + 3 negative (verifier rejection, malformed input, zero-initial state)
+- `Deploy.s.sol` reads `PROGRAM_VKEY` from `PROGRAM_VKEY=$(jq -r '.program_vkey' proof.json)` — not hardcoded
 
 ### Step 4 — Integration Script ✅
 - `script/` — standalone Cargo workspace (separate from root to avoid serde_core conflict with sp1-sdk)
 - `script/src/main.rs`:
   - Loads `data/users.json` + `data/reserves.json`
   - Generates proof via `ProverClient::from_env()` — respects `SP1_PROVER` env var
+  - Derives `program_vkey` live from `pk.vk.bytes32()` — written into `proof.json`, never hardcoded
   - Saves `proof.json` with proof bytes, public values, and programVKey
-  - Submit on-chain via `contracts/script/Submit.s.sol` (requires `CONTRACT_ADDRESS`, `PRIVATE_KEY`, `--rpc-url`)
-- sp1-sdk 6.1.0 with `default-features = false` (avoids serde conflict)
+- sp1-sdk 6.1.0, proof system: PLONK (Gnark BN254), proof size: 964 bytes
 - ELF embedded via `include_bytes!` pointing to `target/elf-compilation/riscv64im-succinct-zkvm-elf/release/solvency-program`
 - Mock mode end-to-end verified: 128-byte public_values, correct Merkle root
 
@@ -72,28 +73,41 @@
 - Results recorded in `docs/benchmarks.md`
 - Key findings: build is O(N), prove/verify are O(log N) ≈ constant; SP1 mock grows ~linearly with N (27s at N=5000)
 
----
-
 ### Step 7 — Next.js Frontend ✅
 - `web/` — Next.js 16 App Router, TypeScript, Tailwind CSS
 - Server component reads `proof.json`, decodes ABI-encoded public_values (128 bytes), renders attestation card with `merkleRoot`, `assetsCommitment`, totals
+- Reads `deployment.json` if present and shows live Etherscan link to `SolvencyProven` tx; falls back to SP1 PLONK gateway link
 - `POST /api/verify` — generates one user's Merkle proof server-side; returns only that user's balance, leaf hash, siblings, and path bits (no bulk data leak)
 - Client component (`InclusionChecker`) re-derives the leaf hash independently from the server-reported balance (detects server lying), then verifies the sibling path against the on-chain `merkleRoot` using the Web Crypto API — no Rust binary, no subprocess
 - `_lib/merkle.ts` — TypeScript Merkle tree mirroring `crates/types/src/merkle.rs` (repeat-last-leaf padding, SHA-256 via `crypto.subtle`)
 - System fonts only (offline-safe; no Google Fonts dependency)
 - Start with: `cd web && npm run dev` → http://localhost:3000
 
+### Step 8 — Sepolia Deployment ✅
+- Real PLONK proof generated via Succinct Prover Network (`SP1_PROVER=network`)
+  - Proof: 964 bytes, selector `0x5a093a2f` (SP1 v6.1.0 PLONK)
+  - `merkleRoot`: `0xc62b97ef52f4d1c1139f3d829235bfa7510b43beb1da0bf0d1b2f961452bb41b`
+  - `totalLiabilities`: 501,258 | `totalAssets`: 601,509 | surplus: +100,251
+- `SolvencyAttestation` deployed to Sepolia: `0x97d55Ff73f7592F85AafF025a94963d02266cC78`
+  - PLONK gateway: `0xd685a80aF2d1761648e56716af4868d850Dae49B`
+  - `programVKey`: `0x0098ee1f091411258d9318cb9a146c4e48145cee16b45a774d0445772cbfca4f`
+- Proof submitted on-chain successfully:
+  - Tx: `0xb952c483e839b5cfbe3694ac4e3a3ace9a643d2dea2273d867dd5c5ea8f43ea3`
+  - Block: 10746772 | Status: success | Event: `SolvencyProven`
+  - Etherscan: https://sepolia.etherscan.io/tx/0xb952c483e839b5cfbe3694ac4e3a3ace9a643d2dea2273d867dd5c5ea8f43ea3
+- `deployment.json` committed; web UI now shows live Etherscan link
+
 ---
 
 ## In Progress
 
-*(nothing — all seven steps done)*
+*(nothing — all steps complete)*
 
 ---
 
 ## Up Next
 
-*(Phase 1 complete)*
+*(all phases complete)*
 
 ---
 
@@ -104,7 +118,9 @@
 - `assetsCommitment` hashes each reserve's `id` AND `balance` so different reserve sets with equal totals produce different commitments
 - Inclusion verification is browser-native (Web Crypto API) — no `inclusion` binary needed at runtime
 - API returns only one user's proof material; leaf hash is re-derived client-side to prevent server lying
-- Proving mode: `SP1_PROVER=mock` for dev (instant), `SP1_PROVER=network` for real proof (cloud GPU)
+- Proving mode: `SP1_PROVER=mock` for dev (instant), `SP1_PROVER=network` for real PLONK proof (~5–15 min via Succinct cloud GPU)
+- Proof system: PLONK (not Groth16) — SP1 v6.1.0 Groth16 on-chain verifier has a known circuit bug; PLONK is unaffected
+- `program_vkey` is derived live from `pk.vk.bytes32()` and written into `proof.json`; `Deploy.s.sol` reads it via env var — nothing hardcoded
 - `data/` is gitignored (generated files); `contracts/lib/` is gitignored (reinstall with `forge install`)
 - No `Co-Authored-By` in commits (user preference)
 
@@ -119,3 +135,5 @@
 - **Negative Solidity tests**: 3 new forge tests covering verifier rejection, malformed public values, and zero-initial attestation state
 - **Offline-safe build**: Replaced `next/font/google` with system font CSS variables — build succeeds without internet access
 - **ESLint 9 flat config**: `web/eslint.config.mjs` using native flat config format
+- **No hardcoded programVKey**: Removed static constant from `script/src/main.rs`; vkey is now derived from `pk.vk.bytes32()` at prove time and passed to `Deploy.s.sol` via env var
+- **PLONK over Groth16**: Switched proof system after diagnosing SP1 v6.1.0 Groth16 on-chain verifier bug; PLONK verification succeeds
