@@ -198,19 +198,36 @@ See `docs/benchmarks.md` for reference numbers on Apple Silicon.
 
 ## Deployment
 
-After generating a real Groth16 proof (network mode), submit it on-chain:
+After generating a real Groth16 proof (network mode), deploy and submit on-chain:
 
-1. Deploy `SolvencyAttestation.sol` with the SP1 verifier gateway address and `PROGRAM_VKEY` from `proof.json`.
-2. Run the Forge submit script:
-
+**Step 1 — Deploy the contract** (one-time):
 ```bash
-CONTRACT_ADDRESS=0x... PRIVATE_KEY=0x... \
+PRIVATE_KEY=0x... \
+forge script contracts/script/Deploy.s.sol \
+  --rpc-url <SEPOLIA_RPC_URL> --broadcast
+```
+Copy the printed contract address for the next step.
+
+**Step 2 — Submit the proof**:
+```bash
+CONTRACT_ADDRESS=0x<deployed_address> PRIVATE_KEY=0x... \
 PROOF_BYTES=$(jq -r '.proof_bytes' proof.json) \
 PUBLIC_VALUES=$(jq -r '.public_values' proof.json) \
 forge script contracts/script/Submit.s.sol \
-  --rpc-url <RPC_URL> --broadcast
+  --rpc-url <SEPOLIA_RPC_URL> --broadcast
 ```
 
-SP1 verifier gateway on Sepolia: `0x397A5f7f3dBd538f23DE225B51f532c34448dA9B`
+**Step 3 — Save deployment info** to `deployment.json` in the repo root:
+```json
+{
+  "network":          "sepolia",
+  "contract_address": "0x<deployed_address>",
+  "submit_tx_hash":   "0x<tx_hash_from_step_2>",
+  "program_vkey":     "0x00680f24d7f1c5c844c2852e84244b6a34215092dc492599792cee4304fd15dd",
+  "sp1_verifier":     "0x397A5f7f3dBd538f23DE225B51f532c34448dA9B"
+}
+```
 
-The contract records the attestation (merkle root, assets commitment, totals, timestamp) and emits a `SolvencyProven` event.
+Once `deployment.json` exists, the web UI automatically shows a live Etherscan link to the `SolvencyProven` transaction.
+
+SP1 verifier gateway on Sepolia: `0x397A5f7f3dBd538f23DE225B51f532c34448dA9B`

@@ -9,6 +9,12 @@ interface Attestation {
   totalAssets: bigint
 }
 
+interface Deployment {
+  network: string
+  contract_address: string
+  submit_tx_hash: string
+}
+
 function decodePublicValues(hex: string): Attestation | null {
   const raw = hex.replace(/^0x/i, '')
   if (raw.length < 256) return null
@@ -20,12 +26,22 @@ function decodePublicValues(hex: string): Attestation | null {
   }
 }
 
+const repoRoot = path.join(process.cwd(), '..')
+
+function readDeployment(): Deployment | null {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(repoRoot, 'deployment.json'), 'utf-8'))
+  } catch { return null }
+}
+
 export default function Home() {
   let attestation: Attestation | null = null
   try {
-    const raw = JSON.parse(fs.readFileSync(path.join(process.cwd(), '..', 'proof.json'), 'utf-8'))
+    const raw = JSON.parse(fs.readFileSync(path.join(repoRoot, 'proof.json'), 'utf-8'))
     attestation = decodePublicValues(raw.public_values)
   } catch { /* proof.json missing — render gracefully */ }
+
+  const deployment = readDeployment()
 
   const surplus = attestation ? attestation.totalAssets - attestation.totalLiabilities : null
 
@@ -68,18 +84,34 @@ export default function Home() {
                   <dd className="font-mono font-semibold text-emerald-600">+{surplus!.toLocaleString()}</dd>
                 </div>
               </dl>
-              <div className="pt-2 border-t border-gray-100">
-                <a
-                  href="https://sepolia.etherscan.io/address/0x397A5f7f3dBd538f23DE225B51f532c34448dA9B"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
-                >
-                  View SP1 Groth16 Verifier on Sepolia ↗
-                </a>
-                <p className="text-xs text-gray-400 mt-1">
-                  SolvencyAttestation.sol deployment pending — showing SP1 verifier gateway address
-                </p>
+              <div className="pt-2 border-t border-gray-100 space-y-2">
+                {deployment ? (
+                  <>
+                    <a
+                      href={`https://sepolia.etherscan.io/tx/${deployment.submit_tx_hash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                    >
+                      View SolvencyProven tx on Sepolia Etherscan ↗
+                    </a>
+                    <p className="text-xs text-gray-400 font-mono break-all">{deployment.contract_address}</p>
+                  </>
+                ) : (
+                  <>
+                    <a
+                      href="https://sepolia.etherscan.io/address/0x397A5f7f3dBd538f23DE225B51f532c34448dA9B"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                    >
+                      View SP1 Groth16 Verifier on Sepolia ↗
+                    </a>
+                    <p className="text-xs text-gray-400 mt-1">
+                      On-chain submission pending — create deployment.json to show the tx link
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           ) : (
