@@ -17,9 +17,9 @@ import {SolvencyAttestation} from "../src/SolvencyAttestation.sol";
 /// Copy the printed contract address into deployment.json and .env as CONTRACT_ADDRESS.
 contract Deploy is Script {
     address constant SP1_VERIFIER =
-        0x397A5f7f3dBd538f23DE225B51f532c34448dA9B;
+        0xd685a80aF2d1761648e56716af4868d850Dae49B;
     bytes32 constant PROGRAM_VKEY =
-        0x00680f24d7f1c5c844c2852e84244b6a34215092dc492599792cee4304fd15dd;
+        0x0098ee1f091411258d9318cb9a146c4e48145cee16b45a774d0445772cbfca4f;
 
     function run() external returns (address) {
         uint256 privateKey = vm.envUint("PRIVATE_KEY");

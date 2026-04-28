@@ -18,7 +18,7 @@
   4. Sum all reserve balances → `totalAssets`
   5. Assert `totalAssets ≥ totalLiabilities`
 - **Public outputs** (128 bytes): ABI-encoded `(bytes32 merkleRoot, bytes32 assetsCommitment, uint64 totalLiabilities, uint64 totalAssets)`
-- `programVKey = 0x00680f24d7f1c5c844c2852e84244b6a34215092dc492599792cee4304fd15dd`
+- `programVKey = 0x0098ee1f091411258d9318cb9a146c4e48145cee16b45a774d0445772cbfca4f`
 
 ### Step 3: Solidity Smart Contract ✅
 - `SolvencyAttestation.sol` in `contracts/`:

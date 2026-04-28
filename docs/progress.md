@@ -31,7 +31,7 @@
 - Rebuilds Merkle root, computes assets commitment, sums both sides, asserts solvency
 - Commits ABI-encoded public outputs (128 bytes): `(merkleRoot, assetsCommitment, totalLiabilities, totalAssets)`
 - ELF at `target/elf-compilation/riscv64im-succinct-zkvm-elf/release/solvency-program`
-- `programVKey = 0x00680f24d7f1c5c844c2852e84244b6a34215092dc492599792cee4304fd15dd`
+- `programVKey = 0x0098ee1f091411258d9318cb9a146c4e48145cee16b45a774d0445772cbfca4f`
 
 ### Step 3 — Solidity Smart Contract ✅
 - Foundry project in `contracts/`

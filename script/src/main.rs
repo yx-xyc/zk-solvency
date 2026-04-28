@@ -8,7 +8,7 @@ const SOLVENCY_ELF: &[u8] = include_bytes!(
 
 // Obtained via `cargo prove vkey` — must match SolvencyAttestation constructor.
 const PROGRAM_VKEY: &str =
-    "0x00680f24d7f1c5c844c2852e84244b6a34215092dc492599792cee4304fd15dd";
+    "0x0098ee1f091411258d9318cb9a146c4e48145cee16b45a774d0445772cbfca4f";
 
 #[tokio::main]
 async fn main() {
@@ -32,7 +32,7 @@ async fn main() {
 
     // 4. Generate proof
     println!("Generating proof (SP1_PROVER={mode})...");
-    let proof = client.prove(&pk, stdin).groth16().await.unwrap();
+    let proof = client.prove(&pk, stdin).plonk().await.unwrap();
     println!("Proof generated.");
 
     let proof_bytes   = proof.bytes();

@@ -223,11 +223,11 @@ forge script contracts/script/Submit.s.sol \
   "network":          "sepolia",
   "contract_address": "0x<deployed_address>",
   "submit_tx_hash":   "0x<tx_hash_from_step_2>",
-  "program_vkey":     "0x00680f24d7f1c5c844c2852e84244b6a34215092dc492599792cee4304fd15dd",
-  "sp1_verifier":     "0x397A5f7f3dBd538f23DE225B51f532c34448dA9B"
+  "program_vkey":     "0x0098ee1f091411258d9318cb9a146c4e48145cee16b45a774d0445772cbfca4f",
+  "sp1_verifier":     "0xd685a80aF2d1761648e56716af4868d850Dae49B"
 }
 ```
 
 Once `deployment.json` exists, the web UI automatically shows a live Etherscan link to the `SolvencyProven` transaction.
 
-SP1 verifier gateway on Sepolia: `0x397A5f7f3dBd538f23DE225B51f532c34448dA9B`
+SP1 PLONK verifier gateway on Sepolia: `0xd685a80aF2d1761648e56716af4868d850Dae49B`
