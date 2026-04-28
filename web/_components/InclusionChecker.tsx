@@ -1,5 +1,16 @@
 'use client'
 import { useState } from 'react'
+import { leafHash, verifyProof, toHex } from '../_lib/merkle'
+
+type ApiResponse = {
+  balance?: number
+  leafHash?: string
+  merkleRoot?: string
+  siblings?: string[]
+  pathBits?: boolean[]
+  proofDepth?: number
+  error?: string
+}
 
 type Result = {
   verified: boolean
@@ -11,7 +22,12 @@ type Result = {
   error?: string
 }
 
-export default function InclusionChecker() {
+function hexToBytes(hex: string): Uint8Array {
+  const h = hex.replace(/^0x/, '')
+  return new Uint8Array(h.match(/.{2}/g)!.map(b => parseInt(b, 16)))
+}
+
+export default function InclusionChecker({ merkleRoot }: { merkleRoot: string }) {
   const [userId, setUserId] = useState('')
   const [result, setResult] = useState<Result | null>(null)
   const [loading, setLoading] = useState(false)
@@ -21,16 +37,55 @@ export default function InclusionChecker() {
     if (!userId) return
     setLoading(true)
     setResult(null)
+
+    const id = Number(userId)
+
     try {
       const res = await fetch('/api/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: Number(userId) }),
+        body: JSON.stringify({ userId: id }),
       })
-      const data: Result = await res.json()
-      setResult(data)
+      const data: ApiResponse = await res.json()
+
+      if (!res.ok || data.error) {
+        setResult({ verified: false, userId: id, error: data.error ?? 'Verification failed' })
+        setLoading(false)
+        return
+      }
+
+      // Re-derive the leaf hash from our own userId + the server-reported balance.
+      // Then verify the inclusion proof against the known merkle root from the attestation.
+      // If the server lies about the balance, the leaf won't match the committed tree.
+      const clientLeaf = await leafHash(id, data.balance!)
+      const clientLeafHex = toHex(clientLeaf)
+      const serverLeafHex = (data.leafHash ?? '').replace(/^0x/, '')
+
+      if (clientLeafHex !== serverLeafHex) {
+        setResult({ verified: false, userId: id, error: 'Leaf hash mismatch — server returned inconsistent data' })
+        setLoading(false)
+        return
+      }
+
+      const rootBytes = merkleRoot ? hexToBytes(merkleRoot) : null
+      const proof = {
+        leafIndex: 0,
+        leaf: clientLeaf,
+        siblings: data.siblings!.map(hexToBytes),
+        pathBits: data.pathBits!,
+      }
+      const verified = rootBytes ? await verifyProof(rootBytes, proof) : false
+
+      setResult({
+        verified,
+        userId: id,
+        balance:    data.balance,
+        leafHash:   data.leafHash,
+        merkleRoot: data.merkleRoot,
+        proofDepth: data.proofDepth,
+      })
     } catch {
-      setResult({ verified: false, userId: Number(userId), error: 'Network error' })
+      setResult({ verified: false, userId: id, error: 'Network error' })
     } finally {
       setLoading(false)
     }

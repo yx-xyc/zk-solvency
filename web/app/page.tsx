@@ -4,26 +4,44 @@ import InclusionChecker from '../_components/InclusionChecker'
 
 interface Attestation {
   merkleRoot: string
+  assetsCommitment: string
   totalLiabilities: bigint
   totalAssets: bigint
 }
 
+interface Deployment {
+  network: string
+  contract_address: string
+  submit_tx_hash: string
+}
+
 function decodePublicValues(hex: string): Attestation | null {
   const raw = hex.replace(/^0x/i, '')
-  if (raw.length < 192) return null
+  if (raw.length < 256) return null
   return {
     merkleRoot:       '0x' + raw.slice(0, 64),
-    totalLiabilities: BigInt('0x' + raw.slice(64, 128)),
-    totalAssets:      BigInt('0x' + raw.slice(128, 192)),
+    assetsCommitment: '0x' + raw.slice(64, 128),
+    totalLiabilities: BigInt('0x' + raw.slice(128, 192)),
+    totalAssets:      BigInt('0x' + raw.slice(192, 256)),
   }
+}
+
+const repoRoot = path.join(process.cwd(), '..')
+
+function readDeployment(): Deployment | null {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(repoRoot, 'deployment.json'), 'utf-8'))
+  } catch { return null }
 }
 
 export default function Home() {
   let attestation: Attestation | null = null
   try {
-    const raw = JSON.parse(fs.readFileSync(path.join(process.cwd(), '..', 'proof.json'), 'utf-8'))
+    const raw = JSON.parse(fs.readFileSync(path.join(repoRoot, 'proof.json'), 'utf-8'))
     attestation = decodePublicValues(raw.public_values)
   } catch { /* proof.json missing — render gracefully */ }
+
+  const deployment = readDeployment()
 
   const surplus = attestation ? attestation.totalAssets - attestation.totalLiabilities : null
 
@@ -49,6 +67,10 @@ export default function Home() {
                   <dt className="text-gray-500 font-medium mb-0.5">Merkle Root</dt>
                   <dd className="font-mono text-gray-800 text-xs break-all">{attestation.merkleRoot}</dd>
                 </div>
+                <div className="sm:col-span-2">
+                  <dt className="text-gray-500 font-medium mb-0.5">Assets Commitment</dt>
+                  <dd className="font-mono text-gray-800 text-xs break-all">{attestation.assetsCommitment}</dd>
+                </div>
                 <div>
                   <dt className="text-gray-500 font-medium mb-0.5">Total Liabilities</dt>
                   <dd className="font-mono text-gray-800">{attestation.totalLiabilities.toLocaleString()}</dd>
@@ -62,18 +84,34 @@ export default function Home() {
                   <dd className="font-mono font-semibold text-emerald-600">+{surplus!.toLocaleString()}</dd>
                 </div>
               </dl>
-              <div className="pt-2 border-t border-gray-100">
-                <a
-                  href="https://sepolia.etherscan.io/address/0x397A5f7f3dBd538f23DE225B51f532c34448dA9B"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
-                >
-                  View SP1 Groth16 Verifier on Sepolia ↗
-                </a>
-                <p className="text-xs text-gray-400 mt-1">
-                  SolvencyAttestation.sol deployment pending — showing SP1 verifier gateway address
-                </p>
+              <div className="pt-2 border-t border-gray-100 space-y-2">
+                {deployment ? (
+                  <>
+                    <a
+                      href={`https://sepolia.etherscan.io/tx/${deployment.submit_tx_hash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                    >
+                      View SolvencyProven tx on Sepolia Etherscan ↗
+                    </a>
+                    <p className="text-xs text-gray-400 font-mono break-all">{deployment.contract_address}</p>
+                  </>
+                ) : (
+                  <>
+                    <a
+                      href="https://sepolia.etherscan.io/address/0xd685a80aF2d1761648e56716af4868d850Dae49B"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                    >
+                      View SP1 PLONK Verifier Gateway on Sepolia ↗
+                    </a>
+                    <p className="text-xs text-gray-400 mt-1">
+                      On-chain submission pending — create deployment.json to show the tx link
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           ) : (
@@ -90,7 +128,7 @@ export default function Home() {
           <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
             Verify Your Inclusion
           </h2>
-          <InclusionChecker />
+          <InclusionChecker merkleRoot={attestation?.merkleRoot ?? ''} />
           <p className="mt-3 text-xs text-gray-400">
             Enter any user ID from 0 to 99 to verify that their balance is committed in the Merkle root above.
           </p>

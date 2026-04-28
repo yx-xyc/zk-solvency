@@ -1,11 +1,8 @@
-import { execFile } from 'child_process'
-import { promisify } from 'util'
 import path from 'path'
+import fs from 'fs'
+import { buildTree, generateProof, leafHash, toHex, type User } from '../../../_lib/merkle'
 
-const execFileAsync = promisify(execFile)
-
-// process.cwd() = web/ when running `npm run dev` from web/
-const REPO_ROOT = path.join(process.cwd(), '..')
+const USERS_FILE = path.join(process.cwd(), '..', 'data', 'users.json')
 
 export async function POST(req: Request) {
   let userId: unknown
@@ -16,47 +13,43 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  if (typeof userId !== 'number' || !Number.isInteger(userId) || userId < 0) {
-    return Response.json({ error: 'userId must be a non-negative integer' }, { status: 400 })
+  if (typeof userId !== 'number' || !Number.isSafeInteger(userId) || userId < 0) {
+    return Response.json(
+      { error: 'userId must be a non-negative integer within the safe integer range (< 2^53)' },
+      { status: 400 }
+    )
   }
 
-  const binary    = path.join(REPO_ROOT, 'target', 'debug', 'inclusion')
-  const usersFile = path.join(REPO_ROOT, 'data', 'users.json')
-  const proofFile = path.join(REPO_ROOT, 'proof.json')
-
+  let users: User[]
   try {
-    const { stdout } = await execFileAsync(
-      binary,
-      ['--user-id', String(userId), '--users-file', usersFile, '--proof-file', proofFile],
-      { timeout: 10_000 }
-    )
-
-    const balance    = Number(stdout.match(/balance\s*:\s*(\d+)/)?.[1])
-    const leafHash   = stdout.match(/leaf_hash:\s*(0x[0-9a-f]+)/)?.[1]
-    const merkleRoot = stdout.match(/merkle_root \(recomputed\):\s*(0x[0-9a-f]+)/)?.[1]
-    const proofDepth = Number(stdout.match(/proof_depth:\s*(\d+)/)?.[1])
-    const verified   = stdout.includes('verification: OK')
-
-    return Response.json({ verified, userId, balance, leafHash, merkleRoot, proofDepth })
-  } catch (err: unknown) {
-    const e = err as { stderr?: string; code?: string }
-    const stderr = e.stderr ?? ''
-
-    if (e.code === 'ENOENT') {
-      return Response.json(
-        { error: 'Inclusion binary not found — run: cargo build -p inclusion' },
-        { status: 500 }
-      )
-    }
-    if (stderr.includes('not found')) {
-      return Response.json(
-        { verified: false, error: `User ID ${userId} not found` },
-        { status: 404 }
-      )
-    }
+    users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'))
+  } catch {
     return Response.json(
-      { verified: false, error: 'Verification failed' + (stderr ? `: ${stderr.trim()}` : '') },
+      { error: 'data/users.json not found — run: cargo run -p data-gen' },
       { status: 500 }
     )
   }
+
+  const index = users.findIndex(u => u.id === userId)
+  if (index === -1) {
+    return Response.json({ error: `User ID ${userId} not found` }, { status: 404 })
+  }
+
+  const user = users[index]
+
+  // Build the tree and generate the proof server-side.
+  // Only the requesting user's {balance, siblings, pathBits} is returned —
+  // no other users' balances are exposed.
+  const proof = await generateProof(users, index)
+  const leaf = await leafHash(user.id, user.balance)
+  const { root } = await buildTree(users)
+
+  return Response.json({
+    balance:    user.balance,
+    leafHash:   '0x' + toHex(leaf),
+    merkleRoot: '0x' + toHex(root),
+    siblings:   proof.siblings.map(s => '0x' + toHex(s)),
+    pathBits:   proof.pathBits,
+    proofDepth: proof.siblings.length,
+  })
 }

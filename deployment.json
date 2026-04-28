@@ -1,0 +1,7 @@
+{
+  "network": "sepolia",
+  "contract_address": "0x97d55Ff73f7592F85AafF025a94963d02266cC78",
+  "submit_tx_hash": "0xb952c483e839b5cfbe3694ac4e3a3ace9a643d2dea2273d867dd5c5ea8f43ea3",
+  "program_vkey": "0x0098ee1f091411258d9318cb9a146c4e48145cee16b45a774d0445772cbfca4f",
+  "sp1_verifier": "0xd685a80aF2d1761648e56716af4868d850Dae49B"
+}

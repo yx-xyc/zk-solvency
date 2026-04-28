@@ -9,6 +9,7 @@ contract SolvencyAttestation {
 
     struct Attestation {
         bytes32 merkleRoot;
+        bytes32 assetsCommitment;
         uint64  totalLiabilities;
         uint64  totalAssets;
         uint256 timestamp;
@@ -18,6 +19,7 @@ contract SolvencyAttestation {
 
     event SolvencyProven(
         bytes32 indexed merkleRoot,
+        bytes32 assetsCommitment,
         uint64  totalLiabilities,
         uint64  totalAssets,
         uint256 timestamp
@@ -34,16 +36,17 @@ contract SolvencyAttestation {
     ) external {
         VERIFIER.verifyProof(PROGRAM_VKEY, publicValues, proofBytes);
 
-        (bytes32 merkleRoot, uint64 totalLiabilities, uint64 totalAssets) =
-            abi.decode(publicValues, (bytes32, uint64, uint64));
+        (bytes32 merkleRoot, bytes32 assetsCommitment, uint64 totalLiabilities, uint64 totalAssets) =
+            abi.decode(publicValues, (bytes32, bytes32, uint64, uint64));
 
         latestAttestation = Attestation({
             merkleRoot:       merkleRoot,
+            assetsCommitment: assetsCommitment,
             totalLiabilities: totalLiabilities,
             totalAssets:      totalAssets,
             timestamp:        block.timestamp
         });
 
-        emit SolvencyProven(merkleRoot, totalLiabilities, totalAssets, block.timestamp);
+        emit SolvencyProven(merkleRoot, assetsCommitment, totalLiabilities, totalAssets, block.timestamp);
     }
 }

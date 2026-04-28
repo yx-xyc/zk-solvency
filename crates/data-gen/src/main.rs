@@ -29,6 +29,20 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
+
+    if args.users == 0 {
+        eprintln!("error: --users must be at least 1 (empty liabilities dataset cannot be proved)");
+        std::process::exit(1);
+    }
+    if args.reserves == 0 {
+        eprintln!("error: --reserves must be at least 1 (division by zero in asset allocation)");
+        std::process::exit(1);
+    }
+    if args.surplus < 0.0 {
+        eprintln!("error: --surplus must be non-negative (negative surplus means insolvent inputs)");
+        std::process::exit(1);
+    }
+
     let mut rng = StdRng::seed_from_u64(args.seed);
 
     // Generate user balances (liabilities)

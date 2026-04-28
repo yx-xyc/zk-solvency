@@ -15,6 +15,10 @@ path = "src/main.rs"
 name = "bench"
 path = "src/bench.rs"
 
+[[bin]]
+name = "test-insolvency"
+path = "src/test_insolvency.rs"
+
 [dependencies]
 sp1-sdk    = { version = "6.1.0", default-features = false, features = ["network"] }
 types      = { path = "../crates/types" }
