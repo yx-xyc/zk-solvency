@@ -175,8 +175,14 @@ Both files share the same schema:
 
 ### 4. Run Solidity tests
 
+First-time setup — install Solidity dependencies (not tracked in git):
 ```bash
 cd contracts
+forge install foundry-rs/forge-std succinctlabs/sp1-contracts
+```
+
+Then run tests:
+```bash
 forge test
 ```
 

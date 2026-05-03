@@ -12,7 +12,7 @@ contracts/cache/
 # Foundry broadcast logs (per-run deployment records — key facts are in deployment.json)
 contracts/broadcast/
 
-# Foundry dependencies (reinstall with: cd contracts && forge install succinctlabs/sp1-contracts --no-git)
+# Foundry dependencies — install with: cd contracts && forge install foundry-rs/forge-std succinctlabs/sp1-contracts
 contracts/lib/
 
 # macOS
