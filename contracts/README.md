@@ -1,3 +1,15 @@
+## Setup
+
+Solidity dependencies are not tracked in git. Install them before building or testing:
+
+```bash
+forge install foundry-rs/forge-std succinctlabs/sp1-contracts
+```
+
+This populates `lib/forge-std` and `lib/sp1-contracts`. Only needed once per clone.
+
+---
+
 ## Foundry
 
 **Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
