@@ -11,7 +11,6 @@
 - Rust 1.95.0 + Cargo installed at `~/.cargo/bin`
 - SP1 toolchain installed at `~/.sp1/bin` (cargo-prove v4.2.1)
 - Foundry installed (`forge`, `cast`, `anvil`)
-- PATH configured in `.claude/settings.json` (project) and `~/.zshrc` (terminal)
 - Git initialized, repo live at https://github.com/yx-xyc/zk-solvency
 
 ### Step 1 — Data Layer ✅
@@ -137,3 +136,21 @@
 - **ESLint 9 flat config**: `web/eslint.config.mjs` using native flat config format
 - **No hardcoded programVKey**: Removed static constant from `script/src/main.rs`; vkey is now derived from `pk.vk.bytes32()` at prove time and passed to `Deploy.s.sol` via env var
 - **PLONK over Groth16**: Switched proof system after diagnosing SP1 v6.1.0 Groth16 on-chain verifier bug; PLONK verification succeeds
+
+---
+
+## Future Work / Open Questions
+
+Raised during the presentation (2026-05-04):
+
+### 1. User ID as email hash
+Currently the exchange assigns each user an opaque integer ID. A more realistic design would derive the user ID from a hash of the user's email address (e.g. `H(email)`). This lets users independently compute their own ID without relying on the exchange to tell them, reducing trust assumptions. Needs to decide on the hash function (SHA-256 is already in use for the tree) and whether the raw email or a salted/KDF'd form is hashed.
+
+### 2. Privacy for exchange reserves (assets side)
+The current `assetsCommitment` hides individual reserve balances behind a single hash commitment, but the total assets figure is public. A stronger design would apply a ZK-friendly privacy mechanism to the reserves as well — for example, a second Merkle tree over reserve entries (mirroring the liabilities side), so the exchange can prove total assets without revealing the composition of its holdings. This is exploratory; a concrete proposal should be written up as a next-steps section in the report.
+
+### 3. Merkle path storage for the web deployment
+In the current setup the server rebuilds the full Merkle tree in memory on every `/api/verify` request and returns the path on demand — feasible for small `data/users.json` but not for a production exchange with millions of users. Options to explore:
+- **Pre-compute and persist paths**: generate all proofs at attestation time and store them (e.g. a database or an object store keyed by user ID).
+- **User-specific delivery**: push each user's path to them directly (email, authenticated portal) so the server never needs to answer path queries at scale.
+- **Sparse Merkle tree**: use a sparse Merkle tree indexed by user ID; any path can be derived in O(log N) without loading all users.
