@@ -9,6 +9,18 @@ A zero-knowledge proof system for cryptocurrency exchange solvency. An exchange 
 3. A ZK proof is generated via the Succinct Prover Network and submitted to `SolvencyAttestation.sol` on-chain.
 4. Any user can verify their balance is in the Merkle root using the web UI — no Rust binary required.
 
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| zkVM | SP1 v6.1.0 (Succinct) |
+| ZK program | Rust (compiled to RISC-V ELF) |
+| Proof system | PLONK (Gnark BN254) |
+| Smart contract | Solidity + Foundry |
+| Frontend | Next.js (TypeScript) |
+
+---
+
 ## Architecture
 
 ```
@@ -228,7 +240,7 @@ zk-solvency/
 │   ├── app/api/verify/route.ts       # POST endpoint: generates one user's Merkle proof server-side
 │   ├── _components/InclusionChecker.tsx  # Client component: submits ID, re-derives leaf, verifies proof in browser
 │   └── _lib/merkle.ts                # TypeScript Merkle tree (mirrors crates/types/src/merkle.rs)
-├── docs/              # Architecture, benchmarks, progress notes
+├── docs/              # Report and presentation (PDF)
 ├── proof.json         # Latest proof artifacts (proof_bytes, public_values, program_vkey)
 ├── deployment.json    # Sepolia deployment info (contract address, tx hash)
 └── data/              # Generated (gitignored): users.json, reserves.json
@@ -275,7 +287,31 @@ cargo run -p bench --release
 SP1_PROVER=mock cargo run --manifest-path script/Cargo.toml --bin bench
 ```
 
-See `docs/benchmarks.md` for reference numbers on Apple Silicon.
+### Reference numbers (Apple Silicon, SP1 v6.1.0)
+
+**SP1 mock execution time** — full zkVM execution without generating a real proof:
+
+| N (users) | SP1 Mock Time (s) | Gas Cost (submitProof) |
+|-----------|-------------------|------------------------|
+| 10 | 0.074 | ~250k (constant) |
+| 100 | 0.469 | ~250k (constant) |
+| 500 | 1.947 | ~250k (constant) |
+| 1,000 | 4.031 | ~250k (constant) |
+| 5,000 | 27.152 | ~250k (constant) |
+
+Gas cost is constant regardless of N because the PLONK verifier always processes a fixed 964-byte proof.
+
+**Merkle tree operations** (release build, averaged over multiple iterations):
+
+| N (users) | build (ms) | prove (µs) | verify (µs) |
+|-----------|------------|------------|-------------|
+| 10 | 0.016 | 0.121 | 2.575 |
+| 100 | 0.088 | 0.137 | 3.124 |
+| 500 | 0.271 | 0.167 | 3.073 |
+| 1,000 | 0.458 | 0.142 | 2.905 |
+| 5,000 | 3.116 | 0.149 | 3.780 |
+
+`build` is O(N) (dominated by N SHA-256 leaf hashes); `prove`/`verify` are O(log N) and effectively constant. Tree depth is ⌈log₂(N)⌉ after padding — e.g. N=100 → 128 leaves → depth 7.
 
 ---
 
